@@ -459,20 +459,20 @@ export default function TaskAutomationSystem() {
             ].map(tab => {
               const IconComponent = tab.icon;
               return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className="flex-1 py-4 px-6 font-semibold text-center border-b-2 transition flex items-center justify-center gap-2"
-                style={{
-                  borderBottomColor: activeTab === tab.id ? '#FF9500' : 'transparent',
-                  color: activeTab === tab.id ? colors.text : colors.textTertiary,
-                  backgroundColor: activeTab === tab.id ? colors.bgSecondary : 'transparent'
-                }}
-              >
-                <IconComponent size={18} />
-                {tab.label}
-              </button>
-            );
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="flex-1 py-4 px-6 font-semibold text-center border-b-2 transition flex items-center justify-center gap-2"
+                  style={{
+                    borderBottomColor: activeTab === tab.id ? '#FF9500' : 'transparent',
+                    color: activeTab === tab.id ? colors.text : colors.textTertiary,
+                    backgroundColor: activeTab === tab.id ? colors.bgSecondary : 'transparent'
+                  }}
+                >
+                  <IconComponent size={18} />
+                  {tab.label}
+                </button>
+              );
             })}
           </div>
 
