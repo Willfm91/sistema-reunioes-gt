@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { BarChart3, Settings, List, Filter, Edit2, Trash2, Save, X, ChevronDown, Moon, Sun } from 'lucide-react';
 
 export default function TaskAutomationSystem() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [darkMode, setDarkMode] = useState(false);
   const [meetings, setMeetings] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
@@ -18,6 +20,40 @@ export default function TaskAutomationSystem() {
   const [filterResponsavel, setFilterResponsavel] = useState('');
   const [filterPrioridade, setFilterPrioridade] = useState('');
   const [editingPrioridade, setEditingPrioridade] = useState(null);
+
+  // Tema Light e Dark
+  const theme = {
+    light: {
+      bg: '#FFFFFF',
+      bgSecondary: '#F9F9F9',
+      bgGradient: 'linear-gradient(135deg, #1A3A52 0%, #2D5A7B 100%)',
+      text: '#1A3A52',
+      textSecondary: '#555555',
+      textTertiary: '#888888',
+      border: '#E0E0E0',
+      card: '#FFFFFF',
+      shadow: '0 2px 8px rgba(26, 58, 82, 0.08)',
+      shadowLg: '0 4px 20px rgba(26, 58, 82, 0.1)',
+      input: '#FFFFFF',
+      inputBorder: '#CCCCCC'
+    },
+    dark: {
+      bg: '#0F1419',
+      bgSecondary: '#1A1F26',
+      bgGradient: 'linear-gradient(135deg, #1A3A52 0%, #2D5A7B 100%)',
+      text: '#E8EAED',
+      textSecondary: '#B8BAC0',
+      textTertiary: '#80838A',
+      border: '#2A2F37',
+      card: '#1A1F26',
+      shadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+      shadowLg: '0 4px 20px rgba(0, 0, 0, 0.4)',
+      input: '#262C34',
+      inputBorder: '#3A3F47'
+    }
+  };
+  
+  const colors = darkMode ? theme.dark : theme.light;
 
   useEffect(() => {
     const savedTasks = localStorage.getItem('tasks');
@@ -170,16 +206,16 @@ export default function TaskAutomationSystem() {
     return (
       <div className="space-y-6">
         {/* Filtros */}
-        <div className="p-4 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
-          <h3 className="font-semibold mb-3" style={{ color: '#1A3A52' }}>🔍 Filtros</h3>
+        <div className="p-4 rounded-lg transition-colors" style={{ backgroundColor: colors.bgSecondary, border: `1px solid ${colors.border}` }}>
+          <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.text }}><Filter size={18} /> Filtros</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Responsável:</label>
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Por Responsável:</label>
               <select
                 value={filterResponsavel}
                 onChange={(e) => setFilterResponsavel(e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+                className="w-full px-3 py-2 rounded text-sm transition-colors"
+                style={{ border: `1px solid ${colors.inputBorder}`, backgroundColor: colors.input, color: colors.text }}
               >
                 <option value="">Todos</option>
                 {getResponsaveisUnicos().map(resp => (
@@ -188,12 +224,12 @@ export default function TaskAutomationSystem() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Prioridade:</label>
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Por Prioridade:</label>
               <select
                 value={filterPrioridade}
                 onChange={(e) => setFilterPrioridade(e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+                className="w-full px-3 py-2 rounded text-sm transition-colors"
+                style={{ border: `1px solid ${colors.inputBorder}`, backgroundColor: colors.input, color: colors.text }}
               >
                 <option value="">Todas</option>
                 <option value="Alta">Alta</option>
@@ -205,22 +241,23 @@ export default function TaskAutomationSystem() {
         </div>
 
         {/* KPIs */}
+        {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#F0F8FF', borderColor: '#4A90E2' }}>
+          <div className="p-4 rounded-lg border transition-colors" style={{ backgroundColor: colors.bgSecondary, borderColor: '#4A90E2' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#4A90E2' }}>Total</div>
-            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{tasks.length}</div>
+            <div className="text-2xl font-bold" style={{ color: colors.text }}>{tasks.length}</div>
           </div>
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#F0FFF4', borderColor: '#2ECC71' }}>
+          <div className="p-4 rounded-lg border transition-colors" style={{ backgroundColor: colors.bgSecondary, borderColor: '#2ECC71' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#2ECC71' }}>Concluídas</div>
-            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{concluidas}</div>
+            <div className="text-2xl font-bold" style={{ color: colors.text }}>{concluidas}</div>
           </div>
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF5E6', borderColor: '#FF9500' }}>
+          <div className="p-4 rounded-lg border transition-colors" style={{ backgroundColor: colors.bgSecondary, borderColor: '#FF9500' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#FF9500' }}>Em Progresso</div>
-            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{emProgresso}</div>
+            <div className="text-2xl font-bold" style={{ color: colors.text }}>{emProgresso}</div>
           </div>
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF0F0', borderColor: '#E63946' }}>
+          <div className="p-4 rounded-lg border transition-colors" style={{ backgroundColor: colors.bgSecondary, borderColor: '#E63946' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#E63946' }}>Atrasadas</div>
-            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{atrasadas}</div>
+            <div className="text-2xl font-bold" style={{ color: colors.text }}>{atrasadas}</div>
           </div>
         </div>
 
@@ -239,7 +276,7 @@ export default function TaskAutomationSystem() {
               const isAtrasada = deadlineDate && deadlineDate < today && task.status !== 'Concluído';
               
               return (
-              <div key={task.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
+              <div key={task.id} className="rounded-lg p-4 transition-colors" style={{ border: `1px solid ${colors.border}`, boxShadow: colors.shadow, backgroundColor: colors.card }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="font-semibold text-slate-900">{task.descricao}</p>
@@ -392,33 +429,51 @@ export default function TaskAutomationSystem() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Roboto, sans-serif' }}>
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ boxShadow: '0 4px 20px rgba(26, 58, 82, 0.1)' }}>
-          <div className="text-white p-8" style={{ background: 'linear-gradient(135deg, #1A3A52 0%, #2D5A7B 100%)' }}>
-            <h1 className="text-4xl font-bold mb-1">TaskFlow</h1>
-            <p className="text-base mb-3 opacity-90">by Willian Marins</p>
-            <p className="text-base opacity-95">Processe transcrições, extraia tarefas e acompanhe prazos automaticamente</p>
-          </div>
+    <div className="min-h-screen transition-colors" style={{ 
+      backgroundColor: colors.bg,
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Roboto, sans-serif'
+    }}>
+      <div className="p-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="rounded-lg shadow-lg overflow-hidden" style={{ boxShadow: colors.shadowLg, backgroundColor: colors.card }}>
+            <div className="text-white p-8 flex justify-between items-start" style={{ background: colors.bgGradient }}>
+              <div>
+                <h1 className="text-4xl font-bold mb-1">TaskFlow</h1>
+                <p className="text-base mb-3 opacity-90">by Willian Marins</p>
+                <p className="text-base opacity-95">Processe transcrições, extraia tarefas e acompanhe prazos automaticamente</p>
+              </div>
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-lg transition"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', color: '#FFFFFF' }}
+                title={darkMode ? 'Modo claro' : 'Modo escuro'}
+              >
+                {darkMode ? <Sun size={24} /> : <Moon size={24} />}
+              </button>
+            </div>
 
-          <div className="border-b flex" style={{ borderColor: '#E0E0E0' }}>
+          <div className="border-b flex transition-colors" style={{ borderColor: colors.border }}>
             {[
-              { id: 'dashboard', label: '📊 Dashboard' },
-              { id: 'processor', label: '⚙️ Processar' }
-            ].map(tab => (
+              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+              { id: 'processor', label: 'Processar', icon: Settings }
+            ].map(tab => {
+              const IconComponent = tab.icon;
+              return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="flex-1 py-4 px-6 font-semibold text-center border-b-2 transition"
+                className="flex-1 py-4 px-6 font-semibold text-center border-b-2 transition flex items-center justify-center gap-2"
                 style={{
                   borderBottomColor: activeTab === tab.id ? '#FF9500' : 'transparent',
-                  color: activeTab === tab.id ? '#1A3A52' : '#888888',
-                  backgroundColor: activeTab === tab.id ? '#FFF9F0' : 'transparent'
+                  color: activeTab === tab.id ? colors.text : colors.textTertiary,
+                  backgroundColor: activeTab === tab.id ? colors.bgSecondary : 'transparent'
                 }}
               >
+                <IconComponent size={18} />
                 {tab.label}
               </button>
-            ))}
+            );
+            })}
           </div>
 
           <div className="p-6">
@@ -426,9 +481,9 @@ export default function TaskAutomationSystem() {
 
             {activeTab === 'processor' && (
               <div className="max-w-2xl mx-auto space-y-6">
-                <div className="border-2 rounded-lg p-6" style={{ borderColor: '#FF9500', backgroundColor: '#FFF9F0' }}>
-                  <h2 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>1️⃣ Cole a Transcrição</h2>
-                  <p className="text-sm mb-3" style={{ color: '#555555' }}>Abra o vídeo da reunião no Google Drive → Clique em "Transcrição" → Copie e cole aqui</p>
+                <div className="border-2 rounded-lg p-6 transition-colors" style={{ borderColor: '#FF9500', backgroundColor: darkMode ? '#1A1F26' : '#FFF9F0' }}>
+                  <h2 className="text-lg font-bold mb-3 flex items-center gap-2" style={{ color: colors.text }}><List size={20} /> Cole a Transcrição</h2>
+                  <p className="text-sm mb-3" style={{ color: colors.textSecondary }}>Abra o vídeo da reunião no Google Drive → Clique em "Transcrição" → Copie e cole aqui</p>
                   <textarea
                     value={transcription}
                     onChange={(e) => setTranscription(e.target.value)}
