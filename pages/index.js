@@ -12,11 +12,15 @@ export default function TaskAutomationSystem() {
   const [editingPrioridade, setEditingPrioridade] = useState(null);
   const [filterResponsavel, setFilterResponsavel] = useState('');
   const [filterPrioridade, setFilterPrioridade] = useState('');
+  const [editingResponsavel, setEditingResponsavel] = useState(null);
+  const [filterDataInicio, setFilterDataInicio] = useState('');
+  const [filterDataFim, setFilterDataFim] = useState('');
+  const [filterStatus, setFilterStatus] = useState('aberto');
   const [formData, setFormData] = useState({
     taskId: null,
     deadline: '',
     deliveryDate: '',
-    status: 'Não Iniciado'
+    responsavel: ''
   });
 
   useEffect(() => {
@@ -89,14 +93,24 @@ export default function TaskAutomationSystem() {
     setEditingPrioridade(null);
   };
 
+  const updateResponsavel = (taskId, novoResponsavel) => {
+    setTasks(tasks.map(t => 
+      t.id === taskId ? { ...t, responsavel: novoResponsavel } : t
+    ));
+    setEditingResponsavel(null);
+  };
+
   const updateTask = (taskId) => {
     const deadline = new Date(formData.deadline);
     const delivery = formData.deliveryDate ? new Date(formData.deliveryDate) : null;
     
     let diasAtraso = 0;
     let statusEntrega = 'Pendente';
+    let novoStatus = 'Não Iniciado';
     
+    // Se preencheu data de entrega, muda pra Concluído automaticamente
     if (delivery) {
+      novoStatus = 'Concluído';
       diasAtraso = Math.floor((delivery.getTime() - deadline.getTime()) / (1000 * 60 * 60 * 24));
       statusEntrega = diasAtraso > 0 ? `Atrasado ${diasAtraso} dias` : `Antecipado ${Math.abs(diasAtraso)} dias`;
     }
@@ -107,15 +121,16 @@ export default function TaskAutomationSystem() {
             ...t,
             deadline: formData.deadline,
             dataEntrega: formData.deliveryDate,
-            status: formData.status,
+            status: novoStatus,
             diasAtraso,
-            statusEntrega
+            statusEntrega,
+            responsavel: formData.responsavel || t.responsavel
           }
         : t
     ));
 
     setEditingTask(null);
-    setFormData({ taskId: null, deadline: '', deliveryDate: '', status: 'Não Iniciado' });
+    setFormData({ taskId: null, deadline: '', deliveryDate: '', responsavel: '' });
   };
 
   const deleteTask = (taskId) => {
@@ -139,12 +154,31 @@ export default function TaskAutomationSystem() {
       return deadlineDate < today;
     }).length;
 
-    const concluidas = tasks.filter(t => t.status === 'Concluído').length;
-    const emProgresso = tasks.filter(t => t.status === 'Em Progresso').length;
+    // Tarefas concluídas com atraso
+    const concluidasComAtraso = tasks.filter(t => t.status === 'Concluído' && t.diasAtraso > 0);
+    const mediaAtraso = concluidasComAtraso.length > 0 
+      ? (concluidasComAtraso.reduce((sum, t) => sum + t.diasAtraso, 0) / concluidasComAtraso.length).toFixed(1)
+      : 0;
 
+    const concluidas = tasks.filter(t => t.status === 'Concluído').length;
+    const emProgresso = tasks.filter(t => t.status === 'Não Iniciado' || t.status === 'Em Progresso').length;
+
+    // Filtro de datas
     const tarefasFiltradas = tasks.filter(t => {
+      // Filtro de status: Em Aberto ou Concluídas
+      if (filterStatus === 'aberto' && t.status === 'Concluído') return false;
+      if (filterStatus === 'concluidas' && t.status !== 'Concluído') return false;
+      
       if (filterResponsavel && t.responsavel !== filterResponsavel) return false;
       if (filterPrioridade && t.prioridade !== filterPrioridade) return false;
+      
+      // Filtro de data - verifica se a data da reunião está entre o período
+      if (filterDataInicio || filterDataFim) {
+        const dataReuniao = t.dataReuniao;
+        if (filterDataInicio && dataReuniao < filterDataInicio) return false;
+        if (filterDataFim && dataReuniao > filterDataFim) return false;
+      }
+      
       return true;
     });
 
@@ -154,7 +188,32 @@ export default function TaskAutomationSystem() {
           <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: '#1A3A52' }}>
             <Filter size={18} /> Filtros
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* Filtro de Status */}
+          <div className="mb-4 flex gap-2">
+            <button
+              onClick={() => setFilterStatus('aberto')}
+              className="px-4 py-2 rounded font-semibold text-sm transition"
+              style={{
+                backgroundColor: filterStatus === 'aberto' ? '#FF9500' : '#E0E0E0',
+                color: filterStatus === 'aberto' ? '#FFFFFF' : '#555555'
+              }}
+            >
+              Em Aberto
+            </button>
+            <button
+              onClick={() => setFilterStatus('concluidas')}
+              className="px-4 py-2 rounded font-semibold text-sm transition"
+              style={{
+                backgroundColor: filterStatus === 'concluidas' ? '#2ECC71' : '#E0E0E0',
+                color: filterStatus === 'concluidas' ? '#FFFFFF' : '#555555'
+              }}
+            >
+              Concluídas
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Responsável:</label>
               <select
@@ -183,10 +242,30 @@ export default function TaskAutomationSystem() {
                 <option value="Baixa">Baixa</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Data Início:</label>
+              <input
+                type="date"
+                value={filterDataInicio}
+                onChange={(e) => setFilterDataInicio(e.target.value)}
+                className="w-full px-3 py-2 rounded text-sm"
+                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Data Fim:</label>
+              <input
+                type="date"
+                value={filterDataFim}
+                onChange={(e) => setFilterDataFim(e.target.value)}
+                className="w-full px-3 py-2 rounded text-sm"
+                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="p-4 rounded-lg border" style={{ backgroundColor: '#F0F8FF', borderColor: '#4A90E2' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#4A90E2' }}>Total</div>
             <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{tasks.length}</div>
@@ -202,6 +281,10 @@ export default function TaskAutomationSystem() {
           <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF0F0', borderColor: '#E63946' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#E63946' }}>Atrasadas</div>
             <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{atrasadas}</div>
+          </div>
+          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF0F0', borderColor: '#E63946' }}>
+            <div className="text-sm font-medium mb-1" style={{ color: '#E63946' }}>Média Atraso</div>
+            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{mediaAtraso} dias</div>
           </div>
         </div>
 
@@ -223,7 +306,23 @@ export default function TaskAutomationSystem() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="font-semibold" style={{ color: '#1A3A52' }}>{task.descricao}</p>
-                      <p className="text-sm mt-1" style={{ color: '#555555' }}>Responsável: {task.responsavel}</p>
+                      {editingResponsavel === task.id ? (
+                        <input
+                          type="text"
+                          value={formData.responsavel || task.responsavel}
+                          onChange={(e) => setFormData({...formData, responsavel: e.target.value})}
+                          onBlur={() => updateResponsavel(task.id, formData.responsavel || task.responsavel)}
+                          onKeyPress={(e) => e.key === 'Enter' && updateResponsavel(task.id, formData.responsavel || task.responsavel)}
+                          autoFocus
+                          className="w-full px-2 py-1 rounded text-sm mt-1"
+                          style={{ border: '1px solid #4A90E2', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+                          placeholder="Nome do responsável"
+                        />
+                      ) : (
+                        <p className="text-sm mt-1 cursor-pointer" style={{ color: '#555555' }} onClick={() => { setEditingResponsavel(task.id); setFormData({...formData, responsavel: task.responsavel}); }} title="Clique para editar">
+                          Responsável: <span className="font-semibold">{task.responsavel}</span>
+                        </p>
+                      )}
                       <p className="text-xs mt-1" style={{ color: '#888888' }}>Data: {task.dataReuniao} às {task.horaReuniao}</p>
                       <div className="mt-2 flex gap-2 flex-wrap">
                         {editingPrioridade === task.id ? (
@@ -285,17 +384,8 @@ export default function TaskAutomationSystem() {
                             onChange={(e) => setFormData({...formData, deliveryDate: e.target.value})}
                             className="w-full px-2 py-1 border rounded text-sm"
                             style={{ borderColor: '#CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+                            placeholder="Preencha para marcar como concluída"
                           />
-                          <select
-                            value={formData.status}
-                            onChange={(e) => setFormData({...formData, status: e.target.value})}
-                            className="w-full px-2 py-1 border rounded text-sm"
-                            style={{ borderColor: '#CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-                          >
-                            <option>Não Iniciado</option>
-                            <option>Em Progresso</option>
-                            <option>Concluído</option>
-                          </select>
                           <div className="flex gap-2">
                             <button
                               onClick={() => updateTask(task.id)}
@@ -328,7 +418,7 @@ export default function TaskAutomationSystem() {
                                   taskId: task.id,
                                   deadline: task.deadline,
                                   deliveryDate: task.dataEntrega,
-                                  status: task.status
+                                  responsavel: task.responsavel
                                 });
                               }}
                               className="text-sm font-medium"
