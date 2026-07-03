@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Settings, Filter, Edit2, Trash2 } from 'lucide-react';
+import { BarChart3, Settings, Filter, Edit2, Trash2, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default function TaskAutomationSystem() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -142,6 +144,87 @@ export default function TaskAutomationSystem() {
     return [...new Set(responsaveis)].filter(Boolean);
   };
 
+  const generatePDF = () => {
+    const tarefasAbertas = tasks.filter(t => t.status !== 'Concluído');
+    
+    if (tarefasAbertas.length === 0) {
+      alert('Nenhuma tarefa em aberto para exportar!');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPosition = 20;
+
+    // Título
+    doc.setFontSize(20);
+    doc.setTextColor(26, 58, 82);
+    doc.text('Atividades Pendentes', 20, yPosition);
+    yPosition += 10;
+
+    // Data de geração
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 20, yPosition);
+    yPosition += 10;
+
+    // Linha separadora
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, yPosition, pageWidth - 20, yPosition);
+    yPosition += 8;
+
+    // Tarefas
+    tarefasAbertas.forEach((task, index) => {
+      // Verificar se precisa de nova página
+      if (yPosition > pageHeight - 40) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      // Número da tarefa
+      doc.setFontSize(11);
+      doc.setTextColor(26, 58, 82);
+      doc.text(`${index + 1}. ${task.descricao}`, 20, yPosition);
+      yPosition += 7;
+
+      // Detalhes
+      doc.setFontSize(9);
+      doc.setTextColor(85, 85, 85);
+      doc.text(`Responsável: ${task.responsavel}`, 25, yPosition);
+      yPosition += 5;
+      doc.text(`Prioridade: ${task.prioridade}`, 25, yPosition);
+      yPosition += 5;
+      doc.text(`Data da Reunião: ${task.dataReuniao} às ${task.horaReuniao}`, 25, yPosition);
+      yPosition += 5;
+      doc.text(`Deadline: ${task.deadline || 'Não definido'}`, 25, yPosition);
+      yPosition += 5;
+
+      // Resumo (se houver)
+      if (task.resumo) {
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        const resumoLines = doc.splitTextToSize(`Resumo: ${task.resumo}`, pageWidth - 50);
+        doc.text(resumoLines, 25, yPosition);
+        yPosition += resumoLines.length * 4 + 2;
+      }
+
+      // Espaço entre tarefas
+      yPosition += 5;
+      doc.setDrawColor(230, 230, 230);
+      doc.line(20, yPosition, pageWidth - 20, yPosition);
+      yPosition += 5;
+    });
+
+    // Rodapé
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('TaskFlow by Willian Marins - Sistema de Gerenciamento de Atividades', 20, pageHeight - 10);
+
+    // Salvar
+    doc.save(`TaskFlow_Atividades_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   const Dashboard = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -185,9 +268,23 @@ export default function TaskAutomationSystem() {
     return (
       <div className="space-y-6">
         <div className="p-4 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
-          <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: '#0052FF' }}>
-            <Filter size={18} /> Filtros
-          </h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-semibold flex items-center gap-2" style={{ color: '#1A3A52' }}>
+              <Filter size={18} /> Filtros
+            </h3>
+            <button
+              onClick={generatePDF}
+              className="px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 transition"
+              style={{ 
+                backgroundColor: '#FF9500',
+                color: '#FFFFFF'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
+            >
+              <Download size={16} /> Exportar PDF
+            </button>
+          </div>
           
           {/* Filtro de Status */}
           <div className="mb-4 flex gap-2">
@@ -195,7 +292,7 @@ export default function TaskAutomationSystem() {
               onClick={() => setFilterStatus('aberto')}
               className="px-4 py-2 rounded font-semibold text-sm transition"
               style={{
-                backgroundColor: filterStatus === 'aberto' ? '#CCFF00' : '#E0E0E0',
+                backgroundColor: filterStatus === 'aberto' ? '#FF9500' : '#E0E0E0',
                 color: filterStatus === 'aberto' ? '#FFFFFF' : '#555555'
               }}
             >
@@ -220,7 +317,7 @@ export default function TaskAutomationSystem() {
                 value={filterResponsavel}
                 onChange={(e) => setFilterResponsavel(e.target.value)}
                 className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#0052FF' }}
+                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
               >
                 <option value="">Todos</option>
                 {getResponsaveisUnicos().map(resp => (
@@ -234,7 +331,7 @@ export default function TaskAutomationSystem() {
                 value={filterPrioridade}
                 onChange={(e) => setFilterPrioridade(e.target.value)}
                 className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#0052FF' }}
+                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
               >
                 <option value="">Todas</option>
                 <option value="Alta">Alta</option>
@@ -249,7 +346,7 @@ export default function TaskAutomationSystem() {
                 value={filterDataInicio}
                 onChange={(e) => setFilterDataInicio(e.target.value)}
                 className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#0052FF' }}
+                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
               />
             </div>
             <div>
@@ -259,32 +356,32 @@ export default function TaskAutomationSystem() {
                 value={filterDataFim}
                 onChange={(e) => setFilterDataFim(e.target.value)}
                 className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#0052FF' }}
+                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
               />
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#F0F8FF', borderColor: '#0052FF' }}>
-            <div className="text-sm font-medium mb-1" style={{ color: '#0052FF' }}>Total</div>
-            <div className="text-2xl font-bold" style={{ color: '#0052FF' }}>{tasks.length}</div>
+          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#F0F8FF', borderColor: '#1A3A52' }}>
+            <div className="text-sm font-medium mb-1" style={{ color: '#1A3A52' }}>Total</div>
+            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{tasks.length}</div>
           </div>
           <div className="p-4 rounded-lg border" style={{ backgroundColor: '#F0FFF4', borderColor: '#2ECC71' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#2ECC71' }}>Concluídas</div>
-            <div className="text-2xl font-bold" style={{ color: '#0052FF' }}>{concluidas}</div>
+            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{concluidas}</div>
           </div>
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF5E6', borderColor: '#CCFF00' }}>
-            <div className="text-sm font-medium mb-1" style={{ color: '#CCFF00' }}>Em Progresso</div>
-            <div className="text-2xl font-bold" style={{ color: '#0052FF' }}>{emProgresso}</div>
+          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF5E6', borderColor: '#FF9500' }}>
+            <div className="text-sm font-medium mb-1" style={{ color: '#FF9500' }}>Em Progresso</div>
+            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{emProgresso}</div>
           </div>
           <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF0F0', borderColor: '#E63946' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#E63946' }}>Atrasadas</div>
-            <div className="text-2xl font-bold" style={{ color: '#0052FF' }}>{atrasadas}</div>
+            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{atrasadas}</div>
           </div>
           <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF0F0', borderColor: '#E63946' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#E63946' }}>Média Atraso</div>
-            <div className="text-2xl font-bold" style={{ color: '#0052FF' }}>{mediaAtraso} dias</div>
+            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{mediaAtraso} dias</div>
           </div>
         </div>
 
@@ -305,7 +402,7 @@ export default function TaskAutomationSystem() {
                 <div key={task.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(0, 82, 255, 0.08)' }}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="font-semibold" style={{ color: '#0052FF' }}>{task.descricao}</p>
+                      <p className="font-semibold" style={{ color: '#1A3A52' }}>{task.descricao}</p>
                       {editingResponsavel === task.id ? (
                         <input
                           type="text"
@@ -315,7 +412,7 @@ export default function TaskAutomationSystem() {
                           onKeyPress={(e) => e.key === 'Enter' && updateResponsavel(task.id, formData.responsavel || task.responsavel)}
                           autoFocus
                           className="w-full px-2 py-1 rounded text-sm mt-1"
-                          style={{ border: '1px solid #0052FF', backgroundColor: '#FFFFFF', color: '#0052FF' }}
+                          style={{ border: '1px solid #1A3A52', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
                           placeholder="Nome do responsável"
                         />
                       ) : (
@@ -332,7 +429,7 @@ export default function TaskAutomationSystem() {
                             onBlur={() => setEditingPrioridade(null)}
                             autoFocus
                             className="px-2 py-1 rounded text-xs font-medium"
-                            style={{ border: '1px solid #CCFF00', backgroundColor: '#FFFFFF', color: '#0052FF' }}
+                            style={{ border: '1px solid #FF9500', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
                           >
                             <option>Alta</option>
                             <option>Média</option>
@@ -344,7 +441,7 @@ export default function TaskAutomationSystem() {
                             className="px-3 py-1 rounded text-xs font-medium cursor-pointer"
                             style={{
                               backgroundColor: task.prioridade === 'Alta' ? '#FFE6E6' : task.prioridade === 'Média' ? '#FFF9F0' : '#F0F8FF',
-                              color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#CCFF00' : '#0052FF'
+                              color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52'
                             }}
                             title="Clique para editar"
                           >
@@ -353,7 +450,7 @@ export default function TaskAutomationSystem() {
                         )}
                         <span className="px-3 py-1 rounded text-xs font-medium" style={{
                           backgroundColor: task.status === 'Concluído' ? '#F0FFF4' : task.status === 'Em Progresso' ? '#FFF9F0' : '#F5F5F5',
-                          color: task.status === 'Concluído' ? '#2ECC71' : task.status === 'Em Progresso' ? '#CCFF00' : '#888888'
+                          color: task.status === 'Concluído' ? '#2ECC71' : task.status === 'Em Progresso' ? '#FF9500' : '#888888'
                         }}>
                           {task.status}
                         </span>
@@ -376,21 +473,21 @@ export default function TaskAutomationSystem() {
                             value={formData.deadline}
                             onChange={(e) => setFormData({...formData, deadline: e.target.value})}
                             className="w-full px-2 py-1 border rounded text-sm"
-                            style={{ borderColor: '#CCCCCC', backgroundColor: '#FFFFFF', color: '#0052FF' }}
+                            style={{ borderColor: '#CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
                           />
                           <input
                             type="date"
                             value={formData.deliveryDate}
                             onChange={(e) => setFormData({...formData, deliveryDate: e.target.value})}
                             className="w-full px-2 py-1 border rounded text-sm"
-                            style={{ borderColor: '#CCCCCC', backgroundColor: '#FFFFFF', color: '#0052FF' }}
+                            style={{ borderColor: '#CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
                             placeholder="Preencha para marcar como concluída"
                           />
                           <div className="flex gap-2">
                             <button
                               onClick={() => updateTask(task.id)}
                               className="flex-1 text-white px-2 py-1 rounded text-sm font-medium"
-                              style={{ backgroundColor: '#0052FF' }}
+                              style={{ backgroundColor: '#1A3A52' }}
                             >
                               Salvar
                             </button>
@@ -422,7 +519,7 @@ export default function TaskAutomationSystem() {
                                 });
                               }}
                               className="text-sm font-medium"
-                              style={{ color: '#0052FF' }}
+                              style={{ color: '#1A3A52' }}
                             >
                               Editar
                             </button>
@@ -448,10 +545,10 @@ export default function TaskAutomationSystem() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4" style={{ fontFamily: "'Sora', -apple-system, BlinkMacSystemFont, Roboto, sans-serif" }}>
+    <div className="min-h-screen bg-gray-50 p-4" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Roboto, sans-serif' }}>
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ boxShadow: '0 4px 20px rgba(0, 82, 255, 0.15)' }}>
-          <div className="text-white p-8" style={{ background: 'linear-gradient(135deg, #0052FF 0%, #0047E0 100%)' }}>
+          <div className="text-white p-8" style={{ background: 'linear-gradient(135deg, #1A3A52 0%, #2D5A7B 100%)' }}>
             <h1 className="text-4xl font-bold mb-1">TaskFlow</h1>
             <p className="text-base mb-3 opacity-90">by Willian Marins</p>
             <p className="text-base opacity-95">Processe transcrições, extraia tarefas e acompanhe prazos automaticamente</p>
@@ -469,8 +566,8 @@ export default function TaskAutomationSystem() {
                   onClick={() => setActiveTab(tab.id)}
                   className="flex-1 py-4 px-6 font-semibold text-center border-b-2 transition flex items-center justify-center gap-2"
                   style={{
-                    borderBottomColor: activeTab === tab.id ? '#CCFF00' : 'transparent',
-                    color: activeTab === tab.id ? '#0052FF' : '#888888',
+                    borderBottomColor: activeTab === tab.id ? '#FF9500' : 'transparent',
+                    color: activeTab === tab.id ? '#1A3A52' : '#888888',
                     backgroundColor: activeTab === tab.id ? '#FFF9F0' : 'transparent'
                   }}
                 >
@@ -486,15 +583,15 @@ export default function TaskAutomationSystem() {
 
             {activeTab === 'processor' && (
               <div className="max-w-2xl mx-auto space-y-6">
-                <div className="border-2 rounded-lg p-6" style={{ borderColor: '#CCFF00', backgroundColor: '#FFF9F0' }}>
-                  <h2 className="text-lg font-bold mb-3" style={{ color: '#0052FF' }}>Cole a Transcrição</h2>
+                <div className="border-2 rounded-lg p-6" style={{ borderColor: '#FF9500', backgroundColor: '#FFF9F0' }}>
+                  <h2 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Cole a Transcrição</h2>
                   <p className="text-sm mb-3" style={{ color: '#555555' }}>Abra o vídeo da reunião no Google Drive → Clique em "Transcrição" → Copie e cole aqui</p>
                   <textarea
                     value={transcription}
                     onChange={(e) => setTranscription(e.target.value)}
                     placeholder="Cole a transcrição completa da reunião aqui..."
                     className="w-full h-48 p-4 border rounded-lg focus:outline-none font-mono text-sm"
-                    style={{ borderColor: '#CCFF00' }}
+                    style={{ borderColor: '#FF9500' }}
                   />
                 </div>
 
@@ -503,7 +600,7 @@ export default function TaskAutomationSystem() {
                   disabled={processing || !transcription.trim()}
                   className="w-full text-white py-4 rounded-lg font-bold text-lg transition"
                   style={{ 
-                    background: 'linear-gradient(135deg, #CCFF00 0%, #B8FF00 100%)',
+                    background: 'linear-gradient(135deg, #FF9500 0%, #B8FF00 100%)',
                     opacity: processing || !transcription.trim() ? '0.6' : '1',
                     cursor: processing || !transcription.trim() ? 'not-allowed' : 'pointer'
                   }}
@@ -513,19 +610,19 @@ export default function TaskAutomationSystem() {
 
                 {processedData && (
                   <div className="border-2 rounded-lg p-6" style={{ borderColor: '#2ECC71', backgroundColor: '#F0FFF4' }}>
-                    <h2 className="text-lg font-bold mb-4" style={{ color: '#0052FF' }}>Resultado da Análise</h2>
+                    <h2 className="text-lg font-bold mb-4" style={{ color: '#1A3A52' }}>Resultado da Análise</h2>
                     
                     <div className="bg-white p-4 rounded-lg mb-4">
-                      <p className="text-sm font-semibold mb-1" style={{ color: '#0052FF' }}>RESUMO DA REUNIÃO</p>
+                      <p className="text-sm font-semibold mb-1" style={{ color: '#1A3A52' }}>RESUMO DA REUNIÃO</p>
                       <p style={{ color: '#555555' }}>{processedData.resumo}</p>
                     </div>
 
                     <div className="bg-white p-4 rounded-lg mb-4">
-                      <p className="text-sm font-semibold mb-2" style={{ color: '#0052FF' }}>TAREFAS IDENTIFICADAS</p>
+                      <p className="text-sm font-semibold mb-2" style={{ color: '#1A3A52' }}>TAREFAS IDENTIFICADAS</p>
                       <div className="space-y-2">
                         {processedData.tarefas.map((t, i) => (
-                          <div key={i} style={{ borderLeft: '4px solid #CCFF00', paddingLeft: '12px', paddingTop: '8px', paddingBottom: '8px' }}>
-                            <p className="font-semibold" style={{ color: '#0052FF' }}>{t.descricao}</p>
+                          <div key={i} style={{ borderLeft: '4px solid #FF9500', paddingLeft: '12px', paddingTop: '8px', paddingBottom: '8px' }}>
+                            <p className="font-semibold" style={{ color: '#1A3A52' }}>{t.descricao}</p>
                             <p className="text-sm" style={{ color: '#555555' }}>Responsável: {t.responsavel}</p>
                           </div>
                         ))}
