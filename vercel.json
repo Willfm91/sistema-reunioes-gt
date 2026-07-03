@@ -1,0 +1,13 @@
+{
+  "buildCommand": "npm run build",
+  "dev": "next dev",
+  "env": {
+    "NEXT_PUBLIC_CLAUDE_API_KEY": "@claude_api_key"
+  },
+  "functions": {
+    "pages/api/**": {
+      "memory": 512,
+      "maxDuration": 30
+    }
+  }
+}
