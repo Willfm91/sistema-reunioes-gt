@@ -47,7 +47,7 @@ export default function TaskAutomationSystem() {
     taskId: null as number | null,
     deadline: '',
     deliveryDate: '',
-    status: 'Não Iniciado' as const
+    status: 'Não Iniciado'
   });
 
   // Carregar dados do localStorage
