@@ -79,7 +79,7 @@ export default function TaskAutomationSystem() {
       { id: 3, title: 'GT Eduardo - Estratégia Q3', date: '2026-06-30', duration: '60 min' }
     ];
     setMeetings(demoMeetings);
-    alert('✅ Conectado ao Google Drive! Reuniões GT* carregadas.');
+    alert('Conectado ao Google Drive! Reuniões GT* carregadas.');
   };
 
   const processTranscription = async () => {
@@ -131,7 +131,7 @@ export default function TaskAutomationSystem() {
     setProcessedData(null);
     setTranscription('');
     setSelectedMeeting(null);
-    alert('✅ Tarefas adicionadas ao dashboard!');
+    alert('Tarefas adicionadas ao dashboard!');
   };
 
   const updateTask = (taskId) => {
@@ -510,7 +510,7 @@ export default function TaskAutomationSystem() {
                     boxShadow: '0 4px 12px rgba(255, 149, 0, 0.3)'
                   }}
                 >
-                  {processing ? '⏳ Processando...' : '🚀 Processar Transcrição com Claude'}
+                  {processing ? 'Processando...' : 'Processar Transcrição com Claude'}
                 </button>
 
                 {processedData && (
@@ -544,7 +544,7 @@ export default function TaskAutomationSystem() {
                       onMouseEnter={(e) => e.target.style.backgroundColor = '#27AE60'}
                       onMouseLeave={(e) => e.target.style.backgroundColor = '#2ECC71'}
                     >
-                      ✅ Adicionar Tarefas ao Dashboard
+                      Adicionar Tarefas ao Dashboard
                     </button>
                   </div>
                 )}
