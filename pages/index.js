@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BarChart3, Settings, Filter, Edit2, Trash2, Download, CheckCircle, Lightbulb } from 'lucide-react';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
-export default function TaskAutomationSystem() {
+export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [meetings, setMeetings] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -14,13 +13,13 @@ export default function TaskAutomationSystem() {
   const [processedData, setProcessedData] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [editingPrioridade, setEditingPrioridade] = useState(null);
+  const [editingResponsavel, setEditingResponsavel] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('aberto');
   const [filterResponsavel, setFilterResponsavel] = useState('');
   const [filterPrioridade, setFilterPrioridade] = useState('');
-  const [editingResponsavel, setEditingResponsavel] = useState(null);
   const [filterDataInicio, setFilterDataInicio] = useState('');
   const [filterDataFim, setFilterDataFim] = useState('');
-  const [filterStatus, setFilterStatus] = useState('aberto');
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [formData, setFormData] = useState({
     taskId: null,
     deadline: '',
@@ -28,6 +27,7 @@ export default function TaskAutomationSystem() {
     responsavel: ''
   });
 
+  // Carregar dados do localStorage
   useEffect(() => {
     const savedTasks = localStorage.getItem('tasks');
     const savedCombinados = localStorage.getItem('combinados');
@@ -58,33 +58,26 @@ export default function TaskAutomationSystem() {
     }
   }, []);
 
+  // Salvar tarefas
   useEffect(() => {
     if (tasks.length > 0) {
       localStorage.setItem('tasks', JSON.stringify(tasks));
     }
   }, [tasks]);
 
+  // Salvar combinados
   useEffect(() => {
     if (combinados.length > 0) {
       localStorage.setItem('combinados', JSON.stringify(combinados));
     }
   }, [combinados]);
 
+  // Salvar insights
   useEffect(() => {
     if (insights.length > 0) {
       localStorage.setItem('insights', JSON.stringify(insights));
     }
   }, [insights]);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (editingPrioridade && !e.target.closest('[data-prioridade-dropdown]')) {
-        setEditingPrioridade(null);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [editingPrioridade]);
 
   const processTranscription = async () => {
     if (!transcription.trim()) {
@@ -126,10 +119,8 @@ export default function TaskAutomationSystem() {
       diasAtraso: 0
     }));
 
-    // Adicionar tarefas
     setTasks([...tasks, ...newTasks]);
 
-    // Adicionar combinados (se existirem)
     if (processedData.combinados && processedData.combinados.length > 0) {
       const newCombinados = processedData.combinados.map((c, idx) => ({
         id: Date.now() + 10000 + idx,
@@ -141,7 +132,6 @@ export default function TaskAutomationSystem() {
       setCombinados([...combinados, ...newCombinados]);
     }
 
-    // Adicionar insights (se existirem)
     if (processedData.insights && processedData.insights.length > 0) {
       const newInsights = processedData.insights.map((i, idx) => ({
         id: Date.now() + 20000 + idx,
@@ -158,65 +148,16 @@ export default function TaskAutomationSystem() {
     alert('Tarefas, combinados e insights adicionados!');
   };
 
-  const updatePrioridade = (taskId, novaPrioridade) => {
-    setTasks(tasks.map(t => 
-      t.id === taskId ? { ...t, prioridade: novaPrioridade } : t
-    ));
-    setEditingPrioridade(null);
-  };
-
-  const updateResponsavel = (taskId, novoResponsavel) => {
-    setTasks(tasks.map(t => 
-      t.id === taskId ? { ...t, responsavel: novoResponsavel } : t
-    ));
-    setEditingResponsavel(null);
-  };
-
-  const updateTask = (taskId) => {
-    const deadline = new Date(formData.deadline);
-    const delivery = formData.deliveryDate ? new Date(formData.deliveryDate) : null;
-    
-    let diasAtraso = 0;
-    let statusEntrega = 'Pendente';
-    let novoStatus = 'Não Iniciado';
-    
-    // Se preencheu data de entrega, muda pra Concluído automaticamente
-    if (delivery) {
-      novoStatus = 'Concluído';
-      diasAtraso = Math.floor((delivery.getTime() - deadline.getTime()) / (1000 * 60 * 60 * 24));
-      statusEntrega = diasAtraso > 0 ? `Atrasado ${diasAtraso} dias` : `Antecipado ${Math.abs(diasAtraso)} dias`;
+  const clearAllData = () => {
+    if (confirm('Tem certeza que quer deletar TODAS as atividades, combinados e insights? Esta ação não pode ser desfeita!')) {
+      setTasks([]);
+      setCombinados([]);
+      setInsights([]);
+      localStorage.removeItem('tasks');
+      localStorage.removeItem('combinados');
+      localStorage.removeItem('insights');
+      alert('Todos os dados foram deletados!');
     }
-
-    setTasks(tasks.map(t => 
-      t.id === taskId 
-        ? {
-            ...t,
-            deadline: formData.deadline,
-            dataEntrega: formData.deliveryDate,
-            status: novoStatus,
-            diasAtraso,
-            statusEntrega,
-            responsavel: formData.responsavel || t.responsavel
-          }
-        : t
-    ));
-
-    setEditingTask(null);
-    setFormData({ taskId: null, deadline: '', deliveryDate: '', responsavel: '' });
-  };
-
-  const deleteTask = (taskId) => {
-    setDeleteConfirm(taskId);
-  };
-
-  const confirmDelete = (taskId) => {
-    setTasks(tasks.filter(t => t.id !== taskId));
-    setDeleteConfirm(null);
-  };
-
-  const getResponsaveisUnicos = () => {
-    const responsaveis = tasks.map(t => t.responsavel);
-    return [...new Set(responsaveis)].filter(Boolean);
   };
 
   const generatePDFCombinados = (combinadosFiltrados) => {
@@ -225,7 +166,6 @@ export default function TaskAutomationSystem() {
       return;
     }
 
-    // Agrupar por responsável
     const combinadosPorResponsavel = {};
     combinadosFiltrados.forEach(combinado => {
       const responsavel = combinado.responsavel || 'Sem responsável';
@@ -244,26 +184,22 @@ export default function TaskAutomationSystem() {
     let yPosition = 20;
     let contador = 1;
 
-    // Título
     doc.setFontSize(18);
     doc.setTextColor(26, 58, 82);
     doc.setFont(undefined, 'bold');
     doc.text('Combinados da Reunião', marginLeft, yPosition);
     yPosition += 10;
 
-    // Data
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
     doc.setFont(undefined, 'normal');
     doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, marginLeft, yPosition);
     yPosition += 8;
 
-    // Linha separadora
     doc.setDrawColor(200, 200, 200);
     doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
     yPosition += 8;
 
-    // Por cada responsável
     Object.keys(combinadosPorResponsavel).forEach((responsavel, indexResp) => {
       const combinadosResponsavel = combinadosPorResponsavel[responsavel];
 
@@ -320,7 +256,6 @@ export default function TaskAutomationSystem() {
       return;
     }
 
-    // Agrupar por responsável
     const insightsPorResponsavel = {};
     insightsFiltrados.forEach(insight => {
       const responsavel = insight.responsavel || 'Sem responsável';
@@ -339,26 +274,22 @@ export default function TaskAutomationSystem() {
     let yPosition = 20;
     let contador = 1;
 
-    // Título
     doc.setFontSize(18);
     doc.setTextColor(26, 58, 82);
     doc.setFont(undefined, 'bold');
     doc.text('Insights da Reunião', marginLeft, yPosition);
     yPosition += 10;
 
-    // Data
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
     doc.setFont(undefined, 'normal');
     doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, marginLeft, yPosition);
     yPosition += 8;
 
-    // Linha separadora
     doc.setDrawColor(200, 200, 200);
     doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
     yPosition += 8;
 
-    // Por cada responsável
     Object.keys(insightsPorResponsavel).forEach((responsavel, indexResp) => {
       const insightsResponsavel = insightsPorResponsavel[responsavel];
 
@@ -408,22 +339,13 @@ export default function TaskAutomationSystem() {
 
     doc.save(`TaskFlow_Insights_${new Date().toISOString().split('T')[0]}.pdf`);
   };
-    if (confirm('Tem certeza que quer deletar TODAS as atividades, combinados e insights? Esta ação não pode ser desfeita!')) {
-      setTasks([]);
-      setCombinados([]);
-      setInsights([]);
-      localStorage.removeItem('tasks');
-      localStorage.removeItem('combinados');
-      localStorage.removeItem('insights');
-      alert('Todos os dados foram deletados!');
-    }
-  };
+
+  const generatePDFWithTasks = (tarefasParaExportar) => {
     if (tarefasParaExportar.length === 0) {
       alert('Nenhuma tarefa para exportar com os filtros selecionados!');
       return;
     }
 
-    // Agrupar por responsável
     const tarefasPorResponsavel = {};
     tarefasParaExportar.forEach(task => {
       const responsavel = task.responsavel || 'Sem responsável';
@@ -440,160 +362,191 @@ export default function TaskAutomationSystem() {
     const marginRight = 15;
     const contentWidth = pageWidth - marginLeft - marginRight;
     let yPosition = 20;
-    let contador = 1;
 
-    // Para cada responsável
     Object.keys(tarefasPorResponsavel).forEach((responsavel, indexResp) => {
       const tarefasResponsavel = tarefasPorResponsavel[responsavel];
-      
-      // Se não é a primeira página e há espaço insuficiente, nova página
-      if (indexResp > 0 && yPosition > pageHeight - 60) {
+
+      if (indexResp > 0) {
         doc.addPage();
         yPosition = 15;
       }
 
-      // Título com responsável
       doc.setFontSize(14);
       doc.setTextColor(26, 58, 82);
       doc.setFont(undefined, 'bold');
-      const primeiraData = tarefasResponsavel[0].dataReuniao;
       doc.text(`Atividades Pendentes | ${responsavel}`, marginLeft, yPosition);
-      yPosition += 6;
-      
-      // Data da reunião
+      yPosition += 7;
+
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
       doc.setFont(undefined, 'normal');
-      doc.text(`Data da reunião: ${primeiraData}`, marginLeft, yPosition);
-      yPosition += 8;
+      doc.text(`Data da reunião: ${tarefasResponsavel[0].dataReuniao}`, marginLeft, yPosition);
+      yPosition += 7;
 
-      // Linha separadora
       doc.setDrawColor(200, 200, 200);
       doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
-      yPosition += 8;
+      yPosition += 7;
 
-      // Tarefas deste responsável
-      tarefasResponsavel.forEach((task, indexTask) => {
-        // Verificar se precisa de nova página
-        if (yPosition > pageHeight - 25) {
+      tarefasResponsavel.forEach((task, idx) => {
+        if (yPosition > pageHeight - 20) {
           doc.addPage();
           yPosition = 15;
         }
 
-        // Atividade
+        const descricaoCompleta = `${idx + 1}. ${task.descricao}`;
+        const lines = doc.splitTextToSize(descricaoCompleta, contentWidth - 5);
         doc.setFontSize(9);
         doc.setTextColor(26, 58, 82);
         doc.setFont(undefined, 'normal');
-        const atividadeText = `${contador}. ${task.descricao}`;
-        const atividadeLines = doc.splitTextToSize(atividadeText, contentWidth - 5);
-        doc.text(atividadeLines, marginLeft + 5, yPosition);
-        yPosition += atividadeLines.length * 4 + 2;
+        doc.text(lines, marginLeft, yPosition);
+        yPosition += lines.length * 4 + 2;
 
-        // Deadline
         doc.setFontSize(8);
-        doc.setTextColor(85, 85, 85);
-        const deadlineText = `Deadline: ${task.deadline || 'Não definido'}`;
-        doc.text(deadlineText, marginLeft + 10, yPosition);
-        yPosition += 6;
-
-        // Espaço entre tarefas
-        yPosition += 2;
-        contador++;
+        doc.setTextColor(100, 100, 100);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Deadline: ${task.deadline || 'Sem data'}`, marginLeft + 2, yPosition);
+        yPosition += 5;
       });
-
-      // Espaço entre responsáveis
-      yPosition += 4;
     });
 
-    // Rodapé
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
     doc.text('TaskFlow by Willian Marins - Sistema de Gerenciamento de Atividades', marginLeft, pageHeight - 8);
 
-    // Salvar
     doc.save(`TaskFlow_Atividades_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const Dashboard = () => {
-    // Filtro de datas - PRIMEIRO calcula as filtradas
-    const tarefasFiltradas = tasks.filter(t => {
-      // Filtro de status: Em Aberto ou Concluídas
-      if (filterStatus === 'aberto' && t.status === 'Concluído') return false;
-      if (filterStatus === 'concluidas' && t.status !== 'Concluído') return false;
-      
-      if (filterResponsavel && t.responsavel !== filterResponsavel) return false;
-      if (filterPrioridade && t.prioridade !== filterPrioridade) return false;
-      
-      // Filtro de data - verifica se a data da reunião está entre o período
-      if (filterDataInicio || filterDataFim) {
-        const dataReuniao = t.dataReuniao;
-        if (filterDataInicio && dataReuniao < filterDataInicio) return false;
-        if (filterDataFim && dataReuniao > filterDataFim) return false;
+  const updatePrioridade = (taskId, newPrioridade) => {
+    setTasks(tasks.map(task => 
+      task.id === taskId ? { ...task, prioridade: newPrioridade } : task
+    ));
+    setEditingPrioridade(null);
+  };
+
+  const updateResponsavel = (taskId, newResponsavel) => {
+    setTasks(tasks.map(task => 
+      task.id === taskId ? { ...task, responsavel: newResponsavel } : task
+    ));
+    setEditingResponsavel(null);
+  };
+
+  const saveTaskChanges = () => {
+    if (!formData.taskId) return;
+
+    const updatedTasks = tasks.map(task => {
+      if (task.id === formData.taskId) {
+        let newStatus = task.status;
+        if (formData.deliveryDate) {
+          newStatus = 'Concluído';
+        } else {
+          newStatus = 'Não Iniciado';
+        }
+
+        return {
+          ...task,
+          deadline: formData.deadline,
+          dataEntrega: formData.deliveryDate,
+          status: newStatus,
+          responsavel: formData.responsavel || task.responsavel
+        };
       }
-      
+      return task;
+    });
+
+    setTasks(updatedTasks);
+    setFormData({ taskId: null, deadline: '', deliveryDate: '', responsavel: '' });
+    setEditingTask(null);
+  };
+
+  const deleteTask = (id) => {
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = (id) => {
+    setTasks(tasks.filter(task => task.id !== id));
+    setDeleteConfirm(null);
+  };
+
+  const Dashboard = () => {
+    const tarefasFiltradas = tasks.filter(task => {
+      if (filterStatus === 'aberto' && task.status === 'Concluído') return false;
+      if (filterStatus === 'concluidas' && task.status !== 'Concluído') return false;
+      if (filterResponsavel && task.responsavel !== filterResponsavel) return false;
+      if (filterPrioridade && task.prioridade !== filterPrioridade) return false;
+      if (filterDataInicio && task.dataReuniao < filterDataInicio) return false;
+      if (filterDataFim && task.dataReuniao > filterDataFim) return false;
       return true;
     });
 
-    // DEPOIS calcula os KPIs baseado nas filtradas
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
+    const today = new Date().toISOString().split('T')[0];
     const atrasadas = tarefasFiltradas.filter(t => {
       if (t.status === 'Concluído') return false;
       if (!t.deadline) return false;
       const deadlineDate = new Date(t.deadline);
-      deadlineDate.setHours(0, 0, 0, 0);
-      return deadlineDate < today;
+      return deadlineDate < new Date(today);
     }).length;
 
-    // Tarefas concluídas com atraso (das filtradas)
-    const concluidasComAtraso = tarefasFiltradas.filter(t => t.status === 'Concluído' && t.diasAtraso > 0);
-    const mediaAtraso = concluidasComAtraso.length > 0 
-      ? (concluidasComAtraso.reduce((sum, t) => sum + t.diasAtraso, 0) / concluidasComAtraso.length).toFixed(1)
-      : 0;
-
     const concluidas = tarefasFiltradas.filter(t => t.status === 'Concluído').length;
-    const emProgresso = tarefasFiltradas.filter(t => t.status === 'Não Iniciado' || t.status === 'Em Progresso').length;
+    const emProgresso = tarefasFiltradas.filter(t => t.status !== 'Concluído').length;
     const total = tarefasFiltradas.length;
+
+    const diasAtrasoTotal = tarefasFiltradas.reduce((sum, t) => {
+      if (t.status === 'Concluído' || !t.deadline) return sum;
+      const deadlineDate = new Date(t.deadline);
+      const diffTime = new Date(today) - deadlineDate;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return sum + (diffDays > 0 ? diffDays : 0);
+    }, 0);
+
+    const mediaAtraso = atrasadas > 0 ? (diasAtrasoTotal / atrasadas).toFixed(1) : 0;
+
+    const pessoasUnicas = [...new Set(tasks.map(t => t.responsavel))].filter(Boolean);
+    const datasUnicas = [...new Set(tasks.map(t => t.dataReuniao))].filter(Boolean);
 
     return (
       <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
+            <p className="text-xs mb-2" style={{ color: '#888888' }}>Total</p>
+            <p className="text-2xl font-bold" style={{ color: '#4A90E2' }}>{total}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
+            <p className="text-xs mb-2" style={{ color: '#888888' }}>Concluídas</p>
+            <p className="text-2xl font-bold" style={{ color: '#2ECC71' }}>{concluidas}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
+            <p className="text-xs mb-2" style={{ color: '#888888' }}>Em Progresso</p>
+            <p className="text-2xl font-bold" style={{ color: '#FF9500' }}>{emProgresso}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
+            <p className="text-xs mb-2" style={{ color: '#888888' }}>Atrasadas</p>
+            <p className="text-2xl font-bold" style={{ color: '#E63946' }}>{atrasadas}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
+            <p className="text-xs mb-2" style={{ color: '#888888' }}>Média Atraso</p>
+            <p className="text-2xl font-bold" style={{ color: '#9B59B6' }}>{mediaAtraso}d</p>
+          </div>
+        </div>
+
         <div className="p-4 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Status:</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-              >
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}>
                 <option value="aberto">Em Aberto</option>
                 <option value="concluidas">Concluídas</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Responsável:</label>
-              <select
-                value={filterResponsavel}
-                onChange={(e) => setFilterResponsavel(e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-              >
+              <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Responsável:</label>
+              <select value={filterResponsavel} onChange={(e) => setFilterResponsavel(e.target.value)} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}>
                 <option value="">Todos</option>
-                {getResponsaveisUnicos().map(resp => (
-                  <option key={resp} value={resp}>{resp}</option>
-                ))}
+                {pessoasUnicas.map(pessoa => (<option key={pessoa} value={pessoa}>{pessoa}</option>))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Prioridade:</label>
-              <select
-                value={filterPrioridade}
-                onChange={(e) => setFilterPrioridade(e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-              >
+              <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Prioridade:</label>
+              <select value={filterPrioridade} onChange={(e) => setFilterPrioridade(e.target.value)} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}>
                 <option value="">Todas</option>
                 <option value="Alta">Alta</option>
                 <option value="Média">Média</option>
@@ -602,242 +555,92 @@ export default function TaskAutomationSystem() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Data Início:</label>
-              <input
-                type="date"
-                value={filterDataInicio}
-                onChange={(e) => setFilterDataInicio(e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-              />
+              <input type="date" value={filterDataInicio} onChange={(e) => setFilterDataInicio(e.target.value)} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Data Fim:</label>
-              <input
-                type="date"
-                value={filterDataFim}
-                onChange={(e) => setFilterDataFim(e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm"
-                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-              />
+              <input type="date" value={filterDataFim} onChange={(e) => setFilterDataFim(e.target.value)} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }} />
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <button
-            onClick={() => generatePDFWithTasks(tarefasFiltradas)}
-            className="px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 transition"
-            style={{ 
-              backgroundColor: '#FF9500',
-              color: '#FFFFFF'
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
-          >
-            <Download size={16} /> Exportar PDF
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => generatePDFWithTasks(tarefasFiltradas)} className="px-4 py-2 rounded text-sm font-semibold text-white transition" style={{ backgroundColor: '#1A3A52' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#0F1A29'} onMouseLeave={(e) => e.target.style.backgroundColor = '#1A3A52'}>
+            Exportar PDF
           </button>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#F0F8FF', borderColor: '#1A3A52' }}>
-            <div className="text-sm font-medium mb-1" style={{ color: '#1A3A52' }}>Total</div>
-            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{total}</div>
-          </div>
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#F0FFF4', borderColor: '#2ECC71' }}>
-            <div className="text-sm font-medium mb-1" style={{ color: '#2ECC71' }}>Concluídas</div>
-            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{concluidas}</div>
-          </div>
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF5E6', borderColor: '#FF9500' }}>
-            <div className="text-sm font-medium mb-1" style={{ color: '#FF9500' }}>Em Progresso</div>
-            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{emProgresso}</div>
-          </div>
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF0F0', borderColor: '#E63946' }}>
-            <div className="text-sm font-medium mb-1" style={{ color: '#E63946' }}>Atrasadas</div>
-            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{atrasadas}</div>
-          </div>
-          <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFF0F0', borderColor: '#E63946' }}>
-            <div className="text-sm font-medium mb-1" style={{ color: '#E63946' }}>Média Atraso</div>
-            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{mediaAtraso} dias</div>
-          </div>
         </div>
 
         <div className="space-y-3">
           {tarefasFiltradas.length === 0 ? (
             <div className="text-center py-12 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
-              <p style={{ color: '#888888' }}>{tasks.length === 0 ? 'Nenhuma tarefa ainda. Processe uma reunião para começar!' : 'Nenhuma tarefa corresponde aos filtros selecionados.'}</p>
+              <p style={{ color: '#888888' }}>Nenhuma tarefa encontrada</p>
             </div>
           ) : (
-            tarefasFiltradas.map(task => {
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              const deadlineDate = task.deadline ? new Date(task.deadline) : null;
-              if (deadlineDate) deadlineDate.setHours(0, 0, 0, 0);
-              const isAtrasada = deadlineDate && deadlineDate < today && task.status !== 'Concluído';
-              
-              return (
-                <div key={task.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(0, 82, 255, 0.08)' }}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="font-semibold" style={{ color: '#1A3A52' }}>{task.descricao}</p>
-                      {editingResponsavel === task.id ? (
-                        <input
-                          type="text"
-                          value={formData.responsavel || task.responsavel}
-                          onChange={(e) => setFormData({...formData, responsavel: e.target.value})}
-                          onBlur={() => updateResponsavel(task.id, formData.responsavel || task.responsavel)}
-                          onKeyPress={(e) => e.key === 'Enter' && updateResponsavel(task.id, formData.responsavel || task.responsavel)}
-                          autoFocus
-                          className="w-full px-2 py-1 rounded text-sm mt-1"
-                          style={{ border: '1px solid #1A3A52', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-                          placeholder="Nome do responsável"
-                        />
-                      ) : (
-                        <p className="text-sm mt-1 cursor-pointer" style={{ color: '#555555' }} onClick={() => { setEditingResponsavel(task.id); setFormData({...formData, responsavel: task.responsavel}); }} title="Clique para editar">
-                          Responsável: <span className="font-semibold">{task.responsavel}</span>
-                        </p>
-                      )}
-                      <p className="text-xs mt-1" style={{ color: '#888888' }}>Data: {task.dataReuniao} às {task.horaReuniao}</p>
-                      <div className="mt-2 flex gap-2 flex-wrap">
-                        {editingPrioridade === task.id ? (
-                          <div className="relative inline-block" data-prioridade-dropdown>
-                            <div className="absolute top-0 left-0 bg-white border-2 border-orange-400 rounded shadow-lg z-10" style={{ borderColor: '#FF9500' }}>
-                              {['Alta', 'Média', 'Baixa'].map(p => (
-                                <div
-                                  key={p}
-                                  onClick={() => {
-                                    updatePrioridade(task.id, p);
-                                    setEditingPrioridade(task.id);
-                                  }}
-                                  className="px-4 py-2 cursor-pointer text-sm transition"
-                                  style={{ 
-                                    color: p === 'Alta' ? '#E63946' : p === 'Média' ? '#FF9500' : '#1A3A52',
-                                    backgroundColor: task.prioridade === p ? '#FFF9F0' : '#FFFFFF'
-                                  }}
-                                  onMouseEnter={(e) => e.target.style.backgroundColor = '#F5F5F5'}
-                                  onMouseLeave={(e) => e.target.style.backgroundColor = task.prioridade === p ? '#FFF9F0' : '#FFFFFF'}
-                                >
-                                  {p === task.prioridade ? '✓ ' : '  '}{p}
-                                </div>
-                              ))}
-                            </div>
-                            <span 
-                              className="px-3 py-1 rounded text-xs font-medium"
-                              style={{
-                                backgroundColor: task.prioridade === 'Alta' ? '#FFE6E6' : task.prioridade === 'Média' ? '#FFF9F0' : '#F0F8FF',
-                                color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52',
-                                border: '2px solid #FF9500'
-                              }}
-                            >
-                              {task.prioridade}
-                            </span>
+            tarefasFiltradas.map(task => (
+              <div key={task.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="font-semibold" style={{ color: '#1A3A52' }}>{task.descricao}</p>
+                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Responsável: <span className="font-semibold">{editingResponsavel === task.id ? (<input type="text" value={formData.responsavel} onChange={(e) => setFormData({...formData, responsavel: e.target.value})} autoFocus className="px-2 py-1 rounded" style={{ border: '1px solid #FF9500' }} onBlur={() => {updateResponsavel(task.id, formData.responsavel || task.responsavel); setFormData({...formData, responsavel: ''});}} />) : (<span onClick={() => {setEditingResponsavel(task.id); setFormData({...formData, responsavel: task.responsavel});}} className="cursor-pointer" title="Clique para editar">{task.responsavel}</span>)}</span></p>
+                  </div>
+                  <div>
+                    <p className="text-sm" style={{ color: '#555555' }}>Prioridade: {editingPrioridade === task.id ? (
+                      <div className="absolute top-0 left-0 bg-white border-2 rounded shadow-lg z-10" style={{ borderColor: '#FF9500' }}>
+                        {['Alta', 'Média', 'Baixa'].map(p => (
+                          <div key={p} onClick={() => {updatePrioridade(task.id, p); setEditingPrioridade(task.id);}} className="px-4 py-2 cursor-pointer text-sm transition" style={{ color: p === 'Alta' ? '#E63946' : p === 'Média' ? '#FF9500' : '#1A3A52', backgroundColor: task.prioridade === p ? '#FFF9F0' : '#FFFFFF' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#F5F5F5'} onMouseLeave={(e) => e.target.style.backgroundColor = task.prioridade === p ? '#FFF9F0' : '#FFFFFF'}>
+                            {p === task.prioridade ? '✓ ' : '  '}{p}
                           </div>
-                        ) : (
-                          <span 
-                            onClick={() => setEditingPrioridade(task.id)}
-                            className="px-3 py-1 rounded text-xs font-medium cursor-pointer"
-                            style={{
-                              backgroundColor: task.prioridade === 'Alta' ? '#FFE6E6' : task.prioridade === 'Média' ? '#FFF9F0' : '#F0F8FF',
-                              color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52'
-                            }}
-                            title="Clique para editar"
-                          >
-                            {task.prioridade}
-                          </span>
-                        )}
-                        {task.status !== 'Não Iniciado' && (
-                          <span className="px-3 py-1 rounded text-xs font-medium" style={{
-                            backgroundColor: task.status === 'Concluído' ? '#F0FFF4' : task.status === 'Em Progresso' ? '#FFF9F0' : '#F5F5F5',
-                            color: task.status === 'Concluído' ? '#2ECC71' : task.status === 'Em Progresso' ? '#FF9500' : '#888888'
-                          }}>
-                            {task.status}
-                          </span>
-                        )}
-                        {isAtrasada && (
-                          <span className="px-3 py-1 rounded text-xs font-medium" style={{
-                            backgroundColor: '#FFE6E6',
-                            color: '#E63946'
-                          }}>
-                            Atrasada
-                          </span>
-                        )}
+                        ))}
                       </div>
-                    </div>
-
-                    <div>
-                      {editingTask === task.id ? (
-                        <div className="space-y-2">
-                          <input
-                            type="date"
-                            value={formData.deadline}
-                            onChange={(e) => setFormData({...formData, deadline: e.target.value})}
-                            className="w-full px-2 py-1 border rounded text-sm"
-                            style={{ borderColor: '#CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-                          />
-                          <input
-                            type="date"
-                            value={formData.deliveryDate}
-                            onChange={(e) => setFormData({...formData, deliveryDate: e.target.value})}
-                            className="w-full px-2 py-1 border rounded text-sm"
-                            style={{ borderColor: '#CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-                            placeholder="Preencha para marcar como concluída"
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => updateTask(task.id)}
-                              className="flex-1 text-white px-2 py-1 rounded text-sm font-medium"
-                              style={{ backgroundColor: '#1A3A52' }}
-                            >
-                              Salvar
-                            </button>
-                            <button
-                              onClick={() => setEditingTask(null)}
-                              className="flex-1 px-2 py-1 rounded text-sm font-medium"
-                              style={{ backgroundColor: '#F0F0F0', color: '#555555' }}
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-1 text-sm">
-                          <p style={{ color: '#555555' }}>Deadline: <span className="font-semibold">{task.deadline || '—'}</span></p>
-                          <p style={{ color: '#555555' }}>Entrega: <span className="font-semibold">{task.dataEntrega || '—'}</span></p>
-                          {task.statusEntrega && (
-                            <p style={{ color: task.diasAtraso > 0 ? '#E63946' : '#2ECC71', fontWeight: 'semibold' }}>{task.statusEntrega}</p>
-                          )}
-                          <div className="flex gap-2 mt-2">
-                            <button
-                              onClick={() => {
-                                setEditingTask(task.id);
-                                setFormData({
-                                  taskId: task.id,
-                                  deadline: task.deadline,
-                                  deliveryDate: task.dataEntrega,
-                                  responsavel: task.responsavel
-                                });
-                              }}
-                              className="text-sm font-medium"
-                              style={{ color: '#1A3A52' }}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => deleteTask(task.id)}
-                              className="text-sm font-medium"
-                              style={{ color: '#E63946' }}
-                            >
-                              Deletar
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                    ) : (
+                      <span onClick={() => setEditingPrioridade(task.id)} className="px-3 py-1 rounded text-xs font-medium cursor-pointer" style={{ backgroundColor: task.prioridade === 'Alta' ? '#FFE6E6' : task.prioridade === 'Média' ? '#FFF9F0' : '#F0F8FF', color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52', border: '2px solid #FF9500' }} title="Clique para editar">{task.prioridade}</span>
+                    )}</p>
+                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Deadline: <span className="font-semibold">{task.deadline || 'Sem data'}</span></p>
+                  </div>
+                  <div>
+                    <p className="text-sm" style={{ color: '#555555' }}>Status: <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: task.status === 'Concluído' ? '#E6F9F0' : '#FFF3E0', color: task.status === 'Concluído' ? '#2ECC71' : '#FF9500' }}>{task.status}</span></p>
+                    <div className="flex gap-2 mt-3">
+                      <button onClick={() => {setEditingTask(task.id); setFormData({taskId: task.id, deadline: task.deadline, deliveryDate: task.dataEntrega, responsavel: task.responsavel});}} className="text-sm font-medium" style={{ color: '#4A90E2' }}>Editar</button>
+                      <button onClick={() => deleteTask(task.id)} className="text-sm font-medium" style={{ color: '#E63946' }}>Deletar</button>
                     </div>
                   </div>
                 </div>
-              );
-            })
+
+                {editingTask === task.id && (
+                  <div className="mt-4 pt-4 border-t" style={{ borderColor: '#E0E0E0' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Deadline:</label>
+                        <input type="date" value={formData.deadline} onChange={(e) => setFormData({...formData, deadline: e.target.value})} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #FF9500', backgroundColor: '#FFFFFF' }} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Data de Entrega:</label>
+                        <input type="date" value={formData.deliveryDate} onChange={(e) => setFormData({...formData, deliveryDate: e.target.value})} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #FF9500', backgroundColor: '#FFFFFF' }} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Responsável:</label>
+                        <input type="text" value={formData.responsavel} onChange={(e) => setFormData({...formData, responsavel: e.target.value})} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #FF9500', backgroundColor: '#FFFFFF' }} />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button onClick={saveTaskChanges} className="px-4 py-2 rounded text-sm font-semibold text-white transition" style={{ backgroundColor: '#2ECC71' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#25B85F'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2ECC71'}>Salvar</button>
+                      <button onClick={() => setEditingTask(null)} className="px-4 py-2 rounded text-sm font-semibold transition" style={{ backgroundColor: '#CCCCCC', color: '#555555' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#AAAAAA'} onMouseLeave={(e) => e.target.style.backgroundColor = '#CCCCCC'}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
           )}
         </div>
+
+        {processedData && (
+          <div className="border-2 rounded-lg p-6" style={{ borderColor: '#FF9500', backgroundColor: '#FFF9F0' }}>
+            <h3 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Prévia do Processamento</h3>
+            <p className="mb-3" style={{ color: '#555555' }}><strong>Resumo:</strong> {processedData.resumo}</p>
+            <p className="mb-3 text-sm" style={{ color: '#555555' }}>Tarefas encontradas: {processedData.tarefas.length}</p>
+            <button onClick={addTasksToBoard} className="w-full text-white py-3 rounded-lg font-semibold transition" style={{ backgroundColor: '#2ECC71' }}>Adicionar Tarefas ao Dashboard</button>
+          </div>
+        )}
       </div>
     );
   };
@@ -887,52 +690,22 @@ export default function TaskAutomationSystem() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Pessoa:</label>
-                <select
-                  value={filterPessoaCombinado}
-                  onChange={(e) => setFilterPessoaCombinado(e.target.value)}
-                  className="w-full px-3 py-2 rounded text-sm"
-                  style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-                >
+                <select value={filterPessoaCombinado} onChange={(e) => setFilterPessoaCombinado(e.target.value)} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}>
                   <option value="">Todos</option>
-                  {pessoasUnicasCombinado.map(pessoa => (
-                    <option key={pessoa} value={pessoa}>{pessoa}</option>
-                  ))}
+                  {pessoasUnicasCombinado.map(pessoa => (<option key={pessoa} value={pessoa}>{pessoa}</option>))}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Data da Reunião:</label>
-                <select
-                  value={filterDataCombinado}
-                  onChange={(e) => setFilterDataCombinado(e.target.value)}
-                  className="w-full px-3 py-2 rounded text-sm"
-                  style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-                >
+                <select value={filterDataCombinado} onChange={(e) => setFilterDataCombinado(e.target.value)} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}>
                   <option value="">Todas</option>
-                  {datasUnicasCombinado.map(data => (
-                    <option key={data} value={data}>{data}</option>
-                  ))}
+                  {datasUnicasCombinado.map(data => (<option key={data} value={data}>{data}</option>))}
                 </select>
               </div>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={addCombinado}
-                className="px-4 py-2 rounded text-sm font-semibold text-white transition"
-                style={{ backgroundColor: '#FF9500' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
-              >
-                + Adicionar
-              </button>
-              <button
-                onClick={() => generatePDFCombinados(combinadosFiltrados)}
-                className="px-4 py-2 rounded text-sm font-semibold text-white transition"
-                style={{ backgroundColor: '#1A3A52' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#0F1A29'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#1A3A52'}
-              >
-                Exportar PDF
-              </button>
+              <button onClick={addCombinado} className="px-4 py-2 rounded text-sm font-semibold text-white transition" style={{ backgroundColor: '#FF9500' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'} onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}> + Adicionar</button>
+              <button onClick={() => generatePDFCombinados(combinadosFiltrados)} className="px-4 py-2 rounded text-sm font-semibold text-white transition" style={{ backgroundColor: '#1A3A52' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#0F1A29'} onMouseLeave={(e) => e.target.style.backgroundColor = '#1A3A52'}> Exportar PDF</button>
             </div>
           </div>
         </div>
@@ -955,13 +728,7 @@ export default function TaskAutomationSystem() {
                     <p className="text-sm mt-2" style={{ color: '#555555' }}>Hora: <span className="font-semibold">{combinado.horaReuniao}</span></p>
                   </div>
                   <div className="flex justify-end items-start">
-                    <button
-                      onClick={() => deleteCombinado(combinado.id)}
-                      className="text-sm font-medium"
-                      style={{ color: '#E63946' }}
-                    >
-                      Deletar
-                    </button>
+                    <button onClick={() => deleteCombinado(combinado.id)} className="text-sm font-medium" style={{ color: '#E63946' }}>Deletar</button>
                   </div>
                 </div>
               </div>
@@ -1017,52 +784,22 @@ export default function TaskAutomationSystem() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Pessoa:</label>
-                <select
-                  value={filterPessoaInsight}
-                  onChange={(e) => setFilterPessoaInsight(e.target.value)}
-                  className="w-full px-3 py-2 rounded text-sm"
-                  style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-                >
+                <select value={filterPessoaInsight} onChange={(e) => setFilterPessoaInsight(e.target.value)} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}>
                   <option value="">Todos</option>
-                  {pessoasUnicasInsight.map(pessoa => (
-                    <option key={pessoa} value={pessoa}>{pessoa}</option>
-                  ))}
+                  {pessoasUnicasInsight.map(pessoa => (<option key={pessoa} value={pessoa}>{pessoa}</option>))}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Data da Reunião:</label>
-                <select
-                  value={filterDataInsight}
-                  onChange={(e) => setFilterDataInsight(e.target.value)}
-                  className="w-full px-3 py-2 rounded text-sm"
-                  style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-                >
+                <select value={filterDataInsight} onChange={(e) => setFilterDataInsight(e.target.value)} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}>
                   <option value="">Todas</option>
-                  {datasUnicasInsight.map(data => (
-                    <option key={data} value={data}>{data}</option>
-                  ))}
+                  {datasUnicasInsight.map(data => (<option key={data} value={data}>{data}</option>))}
                 </select>
               </div>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={addInsight}
-                className="px-4 py-2 rounded text-sm font-semibold text-white transition"
-                style={{ backgroundColor: '#FF9500' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
-              >
-                + Adicionar
-              </button>
-              <button
-                onClick={() => generatePDFInsights(insightsFiltrados)}
-                className="px-4 py-2 rounded text-sm font-semibold text-white transition"
-                style={{ backgroundColor: '#1A3A52' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#0F1A29'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#1A3A52'}
-              >
-                Exportar PDF
-              </button>
+              <button onClick={addInsight} className="px-4 py-2 rounded text-sm font-semibold text-white transition" style={{ backgroundColor: '#FF9500' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'} onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}> + Adicionar</button>
+              <button onClick={() => generatePDFInsights(insightsFiltrados)} className="px-4 py-2 rounded text-sm font-semibold text-white transition" style={{ backgroundColor: '#1A3A52' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#0F1A29'} onMouseLeave={(e) => e.target.style.backgroundColor = '#1A3A52'}> Exportar PDF</button>
             </div>
           </div>
         </div>
@@ -1085,13 +822,7 @@ export default function TaskAutomationSystem() {
                     <p className="text-sm mt-2" style={{ color: '#555555' }}>Hora: <span className="font-semibold">{insight.horaReuniao}</span></p>
                   </div>
                   <div className="flex justify-end items-start">
-                    <button
-                      onClick={() => deleteInsight(insight.id)}
-                      className="text-sm font-medium"
-                      style={{ color: '#E63946' }}
-                    >
-                      Deletar
-                    </button>
+                    <button onClick={() => deleteInsight(insight.id)} className="text-sm font-medium" style={{ color: '#E63946' }}>Deletar</button>
                   </div>
                 </div>
               </div>
@@ -1113,16 +844,7 @@ export default function TaskAutomationSystem() {
                 <p className="text-base mb-3 opacity-90">by Willian Marins</p>
                 <p className="text-base opacity-95">Processe transcrições, extraia tarefas e acompanhe prazos automaticamente</p>
               </div>
-              <button
-                onClick={clearAllData}
-                className="px-4 py-2 rounded text-sm font-semibold transition text-red-600"
-                style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
-                title="Deletar tudo"
-              >
-                Limpar Tudo
-              </button>
+              <button onClick={clearAllData} className="px-4 py-2 rounded text-sm font-semibold transition text-red-600" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'} title="Deletar tudo">Limpar Tudo</button>
             </div>
           </div>
 
@@ -1135,16 +857,7 @@ export default function TaskAutomationSystem() {
             ].map(tab => {
               const IconComponent = tab.icon;
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className="flex-1 py-4 px-6 font-semibold text-center border-b-2 transition flex items-center justify-center gap-2"
-                  style={{
-                    borderBottomColor: activeTab === tab.id ? '#FF9500' : 'transparent',
-                    color: activeTab === tab.id ? '#1A3A52' : '#888888',
-                    backgroundColor: activeTab === tab.id ? '#FFF9F0' : 'transparent'
-                  }}
-                >
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="flex items-center gap-2 px-6 py-4 border-b-2 font-semibold transition" style={{ borderColor: activeTab === tab.id ? '#FF9500' : 'transparent', color: activeTab === tab.id ? '#FF9500' : '#999999' }} onMouseEnter={(e) => { if (activeTab !== tab.id) e.target.style.color = '#666666'; }} onMouseLeave={(e) => { if (activeTab !== tab.id) e.target.style.color = '#999999'; }}>
                   <IconComponent size={18} />
                   {tab.label}
                 </button>
@@ -1164,56 +877,24 @@ export default function TaskAutomationSystem() {
                 <div className="border-2 rounded-lg p-6" style={{ borderColor: '#FF9500', backgroundColor: '#FFF9F0' }}>
                   <h2 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Cole a Transcrição</h2>
                   <p className="text-sm mb-3" style={{ color: '#555555' }}>Abra o vídeo da reunião no Google Drive → Clique em "Transcrição" → Copie e cole aqui</p>
-                  <textarea
-                    value={transcription}
-                    onChange={(e) => setTranscription(e.target.value)}
-                    placeholder="Cole a transcrição completa da reunião aqui..."
-                    className="w-full h-48 p-4 border rounded-lg focus:outline-none font-mono text-sm"
-                    style={{ borderColor: '#FF9500' }}
-                  />
+                  <textarea value={transcription} onChange={(e) => setTranscription(e.target.value)} placeholder="Cole a transcrição completa da reunião aqui..." className="w-full h-48 p-4 border rounded-lg focus:outline-none font-mono text-sm" style={{ borderColor: '#FF9500', backgroundColor: '#FFFFFF' }} />
+                  <button onClick={processTranscription} disabled={processing} className="w-full mt-4 text-white py-3 rounded-lg font-semibold transition" style={{ backgroundColor: processing ? '#CCCCCC' : '#FF9500' }} onMouseEnter={(e) => { if (!processing) e.target.style.backgroundColor = '#E68A00'; }} onMouseLeave={(e) => { if (!processing) e.target.style.backgroundColor = '#FF9500'; }}>
+                    {processing ? 'Processando...' : 'Processar Transcrição com Claude'}
+                  </button>
                 </div>
 
-                <button
-                  onClick={processTranscription}
-                  disabled={processing || !transcription.trim()}
-                  className="w-full text-white py-4 rounded-lg font-bold text-lg transition"
-                  style={{ 
-                    background: 'linear-gradient(135deg, #FF9500 0%, #B8FF00 100%)',
-                    opacity: processing || !transcription.trim() ? '0.6' : '1',
-                    cursor: processing || !transcription.trim() ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {processing ? 'Processando...' : 'Processar Transcrição com Claude'}
-                </button>
-
                 {processedData && (
-                  <div className="border-2 rounded-lg p-6" style={{ borderColor: '#2ECC71', backgroundColor: '#F0FFF4' }}>
-                    <h2 className="text-lg font-bold mb-4" style={{ color: '#1A3A52' }}>Resultado da Análise</h2>
-                    
-                    <div className="bg-white p-4 rounded-lg mb-4">
-                      <p className="text-sm font-semibold mb-1" style={{ color: '#1A3A52' }}>RESUMO DA REUNIÃO</p>
-                      <p style={{ color: '#555555' }}>{processedData.resumo}</p>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-lg mb-4">
-                      <p className="text-sm font-semibold mb-2" style={{ color: '#1A3A52' }}>TAREFAS IDENTIFICADAS</p>
-                      <div className="space-y-2">
-                        {processedData.tarefas.map((t, i) => (
-                          <div key={i} style={{ borderLeft: '4px solid #FF9500', paddingLeft: '12px', paddingTop: '8px', paddingBottom: '8px' }}>
-                            <p className="font-semibold" style={{ color: '#1A3A52' }}>{t.descricao}</p>
-                            <p className="text-sm" style={{ color: '#555555' }}>Responsável: {t.responsavel}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={addTasksToBoard}
-                      className="w-full text-white py-3 rounded-lg font-semibold transition"
-                      style={{ 
-                        backgroundColor: '#2ECC71'
-                      }}
-                    >
+                  <div className="border-2 rounded-lg p-6" style={{ borderColor: '#FF9500', backgroundColor: '#FFF9F0' }}>
+                    <h3 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Prévia do Processamento</h3>
+                    <p className="mb-3" style={{ color: '#555555' }}><strong>Resumo:</strong> {processedData.resumo}</p>
+                    <p className="mb-3 text-sm" style={{ color: '#555555' }}>Tarefas encontradas: {processedData.tarefas.length}</p>
+                    {processedData.combinados && processedData.combinados.length > 0 && (
+                      <p className="mb-3 text-sm" style={{ color: '#555555' }}>Combinados encontrados: {processedData.combinados.length}</p>
+                    )}
+                    {processedData.insights && processedData.insights.length > 0 && (
+                      <p className="mb-3 text-sm" style={{ color: '#555555' }}>Insights encontrados: {processedData.insights.length}</p>
+                    )}
+                    <button onClick={addTasksToBoard} className="w-full text-white py-3 rounded-lg font-semibold transition" style={{ backgroundColor: '#2ECC71' }}>
                       Adicionar Tarefas ao Dashboard
                     </button>
                   </div>
@@ -1224,29 +905,16 @@ export default function TaskAutomationSystem() {
         </div>
       </div>
 
-      {/* Modal de Confirmação de Delete */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-sm" style={{ boxShadow: '0 10px 40px rgba(26, 58, 82, 0.2)' }}>
             <h3 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Confirmar Exclusão</h3>
             <p className="mb-6" style={{ color: '#555555' }}>Tem certeza que deseja deletar esta tarefa? Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">
-              <button
-                onClick={() => confirmDelete(deleteConfirm)}
-                className="flex-1 text-white py-2 rounded-lg font-semibold transition"
-                style={{ backgroundColor: '#E63946' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#C92A33'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#E63946'}
-              >
+              <button onClick={() => confirmDelete(deleteConfirm)} className="flex-1 text-white py-2 rounded-lg font-semibold transition" style={{ backgroundColor: '#E63946' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#C92A33'} onMouseLeave={(e) => e.target.style.backgroundColor = '#E63946'}>
                 Confirmar Deletar
               </button>
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="flex-1 py-2 rounded-lg font-semibold transition"
-                style={{ backgroundColor: '#E0E0E0', color: '#555555' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#D0D0D0'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#E0E0E0'}
-              >
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2 rounded-lg font-semibold transition" style={{ backgroundColor: '#CCCCCC', color: '#555555' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#AAAAAA'} onMouseLeave={(e) => e.target.style.backgroundColor = '#CCCCCC'}>
                 Cancelar
               </button>
             </div>
