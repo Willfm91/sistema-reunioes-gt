@@ -34,7 +34,29 @@ export default async function handler(
         messages: [
           {
             role: 'user',
-            content: `Transcrição: ${transcription}\n\nRetorne JSON com tarefas, combinados, insights. Formato exato:\n{"resumo":"texto","tarefas":[{"descricao":"texto","responsavel":"nome","prioridade":"Alta"}],"combinados":[{"descricao":"texto","responsavel":"nome"}],"insights":[{"descricao":"texto","responsavel":"nome"}],"dataReuniao":"01/01/2026","horaReuniao":"10:00"}`
+            content: `Leia esta transcrição:
+
+${transcription}
+
+Extraia TAREFAS (ações a fazer com descrição clara), COMBINADOS (decisões) e INSIGHTS (problemas/oportunidades).
+
+IMPORTANTE: CADA TAREFA DEVE TER descricao COMPLETA E CLARA.
+
+Retorne APENAS JSON válido:
+{
+  "resumo": "resumo em 2-3 linhas",
+  "tarefas": [
+    {"descricao": "descrição COMPLETA da ação", "responsavel": "nome", "prioridade": "Alta"}
+  ],
+  "combinados": [
+    {"descricao": "descrição do que foi combinado", "responsavel": "nome"}
+  ],
+  "insights": [
+    {"descricao": "descrição do problema ou oportunidade", "responsavel": "nome"}
+  ],
+  "dataReuniao": "01/01/2026",
+  "horaReuniao": "10:00"
+}`
           }
         ]
       }),
