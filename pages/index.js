@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Settings, Filter, Edit2, Trash2, Download } from 'lucide-react';
+import { BarChart3, Settings, Filter, Edit2, Trash2, Download, CheckCircle, Lightbulb } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -7,6 +7,8 @@ export default function TaskAutomationSystem() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [meetings, setMeetings] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [combinados, setCombinados] = useState([]);
+  const [insights, setInsights] = useState([]);
   const [transcription, setTranscription] = useState('');
   const [processing, setProcessing] = useState(false);
   const [processedData, setProcessedData] = useState(null);
@@ -28,11 +30,30 @@ export default function TaskAutomationSystem() {
 
   useEffect(() => {
     const savedTasks = localStorage.getItem('tasks');
+    const savedCombinados = localStorage.getItem('combinados');
+    const savedInsights = localStorage.getItem('insights');
+    
     if (savedTasks) {
       try {
         setTasks(JSON.parse(savedTasks));
       } catch (e) {
         console.error('Error loading tasks:', e);
+      }
+    }
+    
+    if (savedCombinados) {
+      try {
+        setCombinados(JSON.parse(savedCombinados));
+      } catch (e) {
+        console.error('Error loading combinados:', e);
+      }
+    }
+    
+    if (savedInsights) {
+      try {
+        setInsights(JSON.parse(savedInsights));
+      } catch (e) {
+        console.error('Error loading insights:', e);
       }
     }
   }, []);
@@ -42,6 +63,18 @@ export default function TaskAutomationSystem() {
       localStorage.setItem('tasks', JSON.stringify(tasks));
     }
   }, [tasks]);
+
+  useEffect(() => {
+    if (combinados.length > 0) {
+      localStorage.setItem('combinados', JSON.stringify(combinados));
+    }
+  }, [combinados]);
+
+  useEffect(() => {
+    if (insights.length > 0) {
+      localStorage.setItem('insights', JSON.stringify(insights));
+    }
+  }, [insights]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -576,6 +609,156 @@ export default function TaskAutomationSystem() {
     );
   };
 
+  const Combinados = () => {
+    const addCombinado = () => {
+      const descricao = prompt('Descreva o combinado:');
+      const responsavel = prompt('De quem é? (nome):');
+      const dataReuniao = prompt('Data da reunião (YYYY-MM-DD):');
+      const horaReuniao = prompt('Hora da reunião (HH:MM):');
+
+      if (descricao && responsavel && dataReuniao && horaReuniao) {
+        const novoCombinado = {
+          id: Date.now(),
+          descricao,
+          responsavel,
+          dataReuniao,
+          horaReuniao
+        };
+        setCombinados([...combinados, novoCombinado]);
+        alert('Combinado adicionado!');
+      }
+    };
+
+    const deleteCombinado = (id) => {
+      if (confirm('Tem certeza que quer deletar este combinado?')) {
+        setCombinados(combinados.filter(c => c.id !== id));
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-end">
+          <button
+            onClick={addCombinado}
+            className="px-4 py-2 rounded text-sm font-semibold text-white transition"
+            style={{ backgroundColor: '#FF9500' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
+          >
+            + Adicionar Combinado
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {combinados.length === 0 ? (
+            <div className="text-center py-12 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
+              <p style={{ color: '#888888' }}>Nenhum combinado registrado ainda.</p>
+            </div>
+          ) : (
+            combinados.map(combinado => (
+              <div key={combinado.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="font-semibold" style={{ color: '#1A3A52' }}>{combinado.descricao}</p>
+                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Pessoa: <span className="font-semibold">{combinado.responsavel}</span></p>
+                  </div>
+                  <div>
+                    <p className="text-sm" style={{ color: '#555555' }}>Data: <span className="font-semibold">{combinado.dataReuniao}</span></p>
+                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Hora: <span className="font-semibold">{combinado.horaReuniao}</span></p>
+                  </div>
+                  <div className="flex justify-end items-start">
+                    <button
+                      onClick={() => deleteCombinado(combinado.id)}
+                      className="text-sm font-medium"
+                      style={{ color: '#E63946' }}
+                    >
+                      Deletar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const Insights = () => {
+    const addInsight = () => {
+      const descricao = prompt('Descreva o insight (ex: Hooks dos videos são fracos, dificuldade em chamar atenção):');
+      const responsavel = prompt('De quem é? (nome):');
+      const dataReuniao = prompt('Data da reunião (YYYY-MM-DD):');
+      const horaReuniao = prompt('Hora da reunião (HH:MM):');
+
+      if (descricao && responsavel && dataReuniao && horaReuniao) {
+        const novoInsight = {
+          id: Date.now(),
+          descricao,
+          responsavel,
+          dataReuniao,
+          horaReuniao
+        };
+        setInsights([...insights, novoInsight]);
+        alert('Insight adicionado!');
+      }
+    };
+
+    const deleteInsight = (id) => {
+      if (confirm('Tem certeza que quer deletar este insight?')) {
+        setInsights(insights.filter(i => i.id !== id));
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-end">
+          <button
+            onClick={addInsight}
+            className="px-4 py-2 rounded text-sm font-semibold text-white transition"
+            style={{ backgroundColor: '#FF9500' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
+          >
+            + Adicionar Insight
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {insights.length === 0 ? (
+            <div className="text-center py-12 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
+              <p style={{ color: '#888888' }}>Nenhum insight registrado ainda.</p>
+            </div>
+          ) : (
+            insights.map(insight => (
+              <div key={insight.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="font-semibold" style={{ color: '#1A3A52' }}>{insight.descricao}</p>
+                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Pessoa: <span className="font-semibold">{insight.responsavel}</span></p>
+                  </div>
+                  <div>
+                    <p className="text-sm" style={{ color: '#555555' }}>Data: <span className="font-semibold">{insight.dataReuniao}</span></p>
+                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Hora: <span className="font-semibold">{insight.horaReuniao}</span></p>
+                  </div>
+                  <div className="flex justify-end items-start">
+                    <button
+                      onClick={() => deleteInsight(insight.id)}
+                      className="text-sm font-medium"
+                      style={{ color: '#E63946' }}
+                    >
+                      Deletar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Roboto, sans-serif' }}>
       <div className="max-w-6xl mx-auto">
@@ -589,7 +772,9 @@ export default function TaskAutomationSystem() {
           <div className="border-b border-slate-200 flex">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-              { id: 'processor', label: 'Processar', icon: Settings }
+              { id: 'processor', label: 'Processar', icon: Settings },
+              { id: 'combinados', label: 'Combinados', icon: CheckCircle },
+              { id: 'insights', label: 'Insights', icon: Lightbulb }
             ].map(tab => {
               const IconComponent = tab.icon;
               return (
@@ -612,6 +797,10 @@ export default function TaskAutomationSystem() {
 
           <div className="p-6">
             {activeTab === 'dashboard' && <Dashboard />}
+
+            {activeTab === 'combinados' && <Combinados />}
+
+            {activeTab === 'insights' && <Insights />}
 
             {activeTab === 'processor' && (
               <div className="max-w-2xl mx-auto space-y-6">
