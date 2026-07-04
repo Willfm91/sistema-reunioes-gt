@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart3, Settings, Filter, Edit2, Trash2, Download, CheckCircle, Lightbulb } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [meetings, setMeetings] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [combinados, setCombinados] = useState([]);
   const [insights, setInsights] = useState([]);
@@ -12,7 +11,7 @@ export default function Home() {
   const [processing, setProcessing] = useState(false);
   const [processedData, setProcessedData] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
-  const [editingPrioridade, setEditingPrioridade] = useState(null);
+  const [openPrioridadeDropdown, setOpenPrioridadeDropdown] = useState(null);
   const [editingResponsavel, setEditingResponsavel] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [filterStatus, setFilterStatus] = useState('aberto');
@@ -95,6 +94,7 @@ export default function Home() {
 
       if (!response.ok) throw new Error(`Erro: ${response.statusText}`);
       const result = await response.json();
+      console.log('Resultado da API:', result);
       setProcessedData(result);
     } catch (error) {
       alert(`Erro ao processar: ${error.message}`);
@@ -115,7 +115,7 @@ export default function Home() {
       resumo: processedData.resumo,
       deadline: '',
       dataEntrega: '',
-      status: 'Não Iniciado',
+      status: 'Em Progresso',
       diasAtraso: 0
     }));
 
@@ -245,9 +245,9 @@ export default function Home() {
 
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text('TaskFlow by Willian Marins - Sistema de Gerenciamento de Atividades', marginLeft, pageHeight - 8);
+    doc.text('Post-Meeting Progress by Willian - Sistema de Gerenciamento de Atividades', marginLeft, pageHeight - 8);
 
-    doc.save(`TaskFlow_Combinados_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`PostMeeting_Combinados_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const generatePDFInsights = (insightsFiltrados) => {
@@ -335,9 +335,9 @@ export default function Home() {
 
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text('TaskFlow by Willian Marins - Sistema de Gerenciamento de Atividades', marginLeft, pageHeight - 8);
+    doc.text('Post-Meeting Progress by Willian - Sistema de Gerenciamento de Atividades', marginLeft, pageHeight - 8);
 
-    doc.save(`TaskFlow_Insights_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`PostMeeting_Insights_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const generatePDFWithTasks = (tarefasParaExportar) => {
@@ -411,16 +411,16 @@ export default function Home() {
 
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text('TaskFlow by Willian Marins - Sistema de Gerenciamento de Atividades', marginLeft, pageHeight - 8);
+    doc.text('Post-Meeting Progress by Willian - Sistema de Gerenciamento de Atividades', marginLeft, pageHeight - 8);
 
-    doc.save(`TaskFlow_Atividades_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`PostMeeting_Atividades_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const updatePrioridade = (taskId, newPrioridade) => {
     setTasks(tasks.map(task => 
       task.id === taskId ? { ...task, prioridade: newPrioridade } : task
     ));
-    setEditingPrioridade(null);
+    setOpenPrioridadeDropdown(null);
   };
 
   const updateResponsavel = (taskId, newResponsavel) => {
@@ -439,7 +439,7 @@ export default function Home() {
         if (formData.deliveryDate) {
           newStatus = 'Concluído';
         } else {
-          newStatus = 'Não Iniciado';
+          newStatus = 'Em Progresso';
         }
 
         return {
@@ -578,28 +578,53 @@ export default function Home() {
           ) : (
             tarefasFiltradas.map(task => (
               <div key={task.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <p className="font-semibold" style={{ color: '#1A3A52' }}>{task.descricao}</p>
                     <p className="text-sm mt-2" style={{ color: '#555555' }}>Responsável: <span className="font-semibold">{editingResponsavel === task.id ? (<input type="text" value={formData.responsavel} onChange={(e) => setFormData({...formData, responsavel: e.target.value})} autoFocus className="px-2 py-1 rounded" style={{ border: '1px solid #FF9500' }} onBlur={() => {updateResponsavel(task.id, formData.responsavel || task.responsavel); setFormData({...formData, responsavel: ''});}} />) : (<span onClick={() => {setEditingResponsavel(task.id); setFormData({...formData, responsavel: task.responsavel});}} className="cursor-pointer" title="Clique para editar">{task.responsavel}</span>)}</span></p>
                   </div>
                   <div>
-                    <p className="text-sm" style={{ color: '#555555' }}>Prioridade: {editingPrioridade === task.id ? (
-                      <div className="absolute top-0 left-0 bg-white border-2 rounded shadow-lg z-10" style={{ borderColor: '#FF9500' }}>
-                        {['Alta', 'Média', 'Baixa'].map(p => (
-                          <div key={p} onClick={() => {updatePrioridade(task.id, p); setEditingPrioridade(task.id);}} className="px-4 py-2 cursor-pointer text-sm transition" style={{ color: p === 'Alta' ? '#E63946' : p === 'Média' ? '#FF9500' : '#1A3A52', backgroundColor: task.prioridade === p ? '#FFF9F0' : '#FFFFFF' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#F5F5F5'} onMouseLeave={(e) => e.target.style.backgroundColor = task.prioridade === p ? '#FFF9F0' : '#FFFFFF'}>
-                            {p === task.prioridade ? '✓ ' : '  '}{p}
-                          </div>
-                        ))}
+                    <p className="text-sm" style={{ color: '#555555' }}>Prioridade:</p>
+                    <div className="relative mt-1">
+                      <div 
+                        onClick={() => setOpenPrioridadeDropdown(openPrioridadeDropdown === task.id ? null : task.id)}
+                        className="px-3 py-1 rounded text-xs font-medium cursor-pointer" 
+                        style={{ 
+                          backgroundColor: task.prioridade === 'Alta' ? '#FFE6E6' : task.prioridade === 'Média' ? '#FFF9F0' : '#F0F8FF',
+                          color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52',
+                          border: '2px solid #FF9500'
+                        }}
+                      >
+                        {task.prioridade}
                       </div>
-                    ) : (
-                      <span onClick={() => setEditingPrioridade(task.id)} className="px-3 py-1 rounded text-xs font-medium cursor-pointer" style={{ backgroundColor: task.prioridade === 'Alta' ? '#FFE6E6' : task.prioridade === 'Média' ? '#FFF9F0' : '#F0F8FF', color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52', border: '2px solid #FF9500' }} title="Clique para editar">{task.prioridade}</span>
-                    )}</p>
+                      {openPrioridadeDropdown === task.id && (
+                        <div className="absolute top-full mt-1 bg-white border-2 rounded shadow-lg z-10" style={{ borderColor: '#FF9500', minWidth: '100px' }}>
+                          {['Alta', 'Média', 'Baixa'].map(p => (
+                            <div
+                              key={p}
+                              onClick={() => updatePrioridade(task.id, p)}
+                              className="px-4 py-2 cursor-pointer text-sm transition"
+                              style={{ 
+                                color: p === 'Alta' ? '#E63946' : p === 'Média' ? '#FF9500' : '#1A3A52',
+                                backgroundColor: task.prioridade === p ? '#FFF9F0' : '#FFFFFF'
+                              }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = '#F5F5F5'}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = task.prioridade === p ? '#FFF9F0' : '#FFFFFF'}
+                            >
+                              {p === task.prioridade ? '✓ ' : '  '}{p}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <p className="text-sm mt-2" style={{ color: '#555555' }}>Deadline: <span className="font-semibold">{task.deadline || 'Sem data'}</span></p>
                   </div>
                   <div>
                     <p className="text-sm" style={{ color: '#555555' }}>Status: <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: task.status === 'Concluído' ? '#E6F9F0' : '#FFF3E0', color: task.status === 'Concluído' ? '#2ECC71' : '#FF9500' }}>{task.status}</span></p>
-                    <div className="flex gap-2 mt-3">
+                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Entrega: <span className="font-semibold">{task.dataEntrega || '-'}</span></p>
+                  </div>
+                  <div>
+                    <div className="flex gap-2">
                       <button onClick={() => {setEditingTask(task.id); setFormData({taskId: task.id, deadline: task.deadline, deliveryDate: task.dataEntrega, responsavel: task.responsavel});}} className="text-sm font-medium" style={{ color: '#4A90E2' }}>Editar</button>
                       <button onClick={() => deleteTask(task.id)} className="text-sm font-medium" style={{ color: '#E63946' }}>Deletar</button>
                     </div>
@@ -638,7 +663,15 @@ export default function Home() {
             <h3 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Prévia do Processamento</h3>
             <p className="mb-3" style={{ color: '#555555' }}><strong>Resumo:</strong> {processedData.resumo}</p>
             <p className="mb-3 text-sm" style={{ color: '#555555' }}>Tarefas encontradas: {processedData.tarefas.length}</p>
-            <button onClick={addTasksToBoard} className="w-full text-white py-3 rounded-lg font-semibold transition" style={{ backgroundColor: '#2ECC71' }}>Adicionar Tarefas ao Dashboard</button>
+            {processedData.combinados && processedData.combinados.length > 0 && (
+              <p className="mb-3 text-sm" style={{ color: '#555555' }}>Combinados encontrados: {processedData.combinados.length}</p>
+            )}
+            {processedData.insights && processedData.insights.length > 0 && (
+              <p className="mb-3 text-sm" style={{ color: '#555555' }}>Insights encontrados: {processedData.insights.length}</p>
+            )}
+            <button onClick={addTasksToBoard} className="w-full text-white py-3 rounded-lg font-semibold transition" style={{ backgroundColor: '#2ECC71' }}>
+              Adicionar Tarefas ao Dashboard
+            </button>
           </div>
         )}
       </div>
@@ -840,11 +873,11 @@ export default function Home() {
           <div className="text-white p-8" style={{ background: 'linear-gradient(135deg, #1A3A52 0%, #2D5A7B 100%)' }}>
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-4xl font-bold mb-1">TaskFlow</h1>
-                <p className="text-base mb-3 opacity-90">by Willian Marins</p>
-                <p className="text-base opacity-95">Processe transcrições, extraia tarefas e acompanhe prazos automaticamente</p>
+                <h1 className="text-4xl font-bold mb-1">Post-Meeting Progress</h1>
+                <p className="text-base mb-3 opacity-90">by Willian</p>
+                <p className="text-base opacity-95">Extraia tarefas, combinados e insights das suas reuniões em um único lugar</p>
               </div>
-              <button onClick={clearAllData} className="px-4 py-2 rounded text-sm font-semibold transition text-red-600" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'} title="Deletar tudo">Limpar Tudo</button>
+              <button onClick={clearAllData} className="px-4 py-2 rounded text-sm font-semibold transition" style={{ backgroundColor: '#0052D4', color: '#AAAAAA' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#003DA8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#0052D4'} title="Deletar tudo">Limpar Tudo</button>
             </div>
           </div>
 
@@ -879,7 +912,7 @@ export default function Home() {
                   <p className="text-sm mb-3" style={{ color: '#555555' }}>Abra o vídeo da reunião no Google Drive → Clique em "Transcrição" → Copie e cole aqui</p>
                   <textarea value={transcription} onChange={(e) => setTranscription(e.target.value)} placeholder="Cole a transcrição completa da reunião aqui..." className="w-full h-48 p-4 border rounded-lg focus:outline-none font-mono text-sm" style={{ borderColor: '#FF9500', backgroundColor: '#FFFFFF' }} />
                   <button onClick={processTranscription} disabled={processing} className="w-full mt-4 text-white py-3 rounded-lg font-semibold transition" style={{ backgroundColor: processing ? '#CCCCCC' : '#FF9500' }} onMouseEnter={(e) => { if (!processing) e.target.style.backgroundColor = '#E68A00'; }} onMouseLeave={(e) => { if (!processing) e.target.style.backgroundColor = '#FF9500'; }}>
-                    {processing ? 'Processando...' : 'Processar Transcrição com Claude'}
+                    {processing ? 'Processando...' : 'Processar'}
                   </button>
                 </div>
 
