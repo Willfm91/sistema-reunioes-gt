@@ -10,57 +10,20 @@ export default async function handler(
 
   const { transcription } = req.body;
 
-  if (!transcription) {
+  if (!transcription || transcription.trim().length === 0) {
     return res.status(400).json({ error: 'Transcrição é obrigatória' });
   }
 
   try {
-    // Log para debug
-    console.log('=== INICIANDO PROCESSAMENTO ===');
-    console.log('Tamanho da transcrição:', transcription.length);
-    
     const apiKey = process.env.CLAUDE_API_KEY || process.env.NEXT_PUBLIC_CLAUDE_API_KEY;
     
     if (!apiKey) {
       console.error('❌ API Key não encontrada');
-      return res.status(500).json({ 
-        error: 'API key não configurada. Configure CLAUDE_API_KEY no Vercel.' 
-      });
+      return res.status(500).json({ error: 'API key não configurada' });
     }
 
-    console.log('✅ API Key encontrada:', apiKey.substring(0, 20) + '...');
-
-    const systemPrompt = `Você é um assistente que extrai informações de transcrições de reuniões.
-
-TAREFA: Extraia tarefas, combinados e insights de uma transcrição.
-
-DEFINIÇÕES:
-- TAREFAS: ações específicas com responsável e prioridade
-- COMBINADOS: decisões e alinhamentos que foram acordados
-- INSIGHTS: problemas ou oportunidades identificadas
-
-RETORNE APENAS este JSON, sem markdown, sem explicações, sem \`\`\`json\`\`\`:
-
-{
-  "resumo": "texto do resumo em 2-3 linhas",
-  "tarefas": [
-    {"descricao": "texto da tarefa", "responsavel": "nome", "prioridade": "Alta"}
-  ],
-  "combinados": [
-    {"descricao": "texto do combinado", "responsavel": "nome"}
-  ],
-  "insights": [
-    {"descricao": "texto do insight", "responsavel": "nome"}
-  ],
-  "dataReuniao": "DD/MM/YYYY",
-  "horaReuniao": "HH:MM"
-}
-
-NÃO ADICIONE NADA ANTES OU DEPOIS DO JSON.
-NÃO USE \`\`\`json\`\`\` OU MARKDOWN.
-RETORNE APENAS O JSON VÁLIDO.`;
-
-    console.log('🔄 Enviando para Claude API...');
+    console.log('=== PROCESSANDO TRANSCRIÇÃO ===');
+    console.log('Tamanho:', transcription.length, 'caracteres');
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -72,87 +35,102 @@ RETORNE APENAS O JSON VÁLIDO.`;
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 4000,
-        system: systemPrompt,
         messages: [
           {
             role: 'user',
-            content: `Analise esta transcrição:\n\n${transcription}`,
-          },
-        ],
+            content: `Você é um assistente especializado em extrair informações de transcrições de reuniões.
+
+LEIA CUIDADOSAMENTE esta transcrição e extraia:
+
+1. RESUMO: Um resumo breve (2-3 linhas) do que foi discutido
+2. TAREFAS: Ações específicas que alguém precisa fazer (com responsável e prioridade Alta/Média/Baixa)
+3. COMBINADOS: Decisões, alinhamentos e acordos que foram DECIDIDOS na reunião
+4. INSIGHTS: Problemas, dificuldades e oportunidades IDENTIFICADAS
+5. DATA E HORA: Da reunião (se mencionada)
+
+RETORNE EXATAMENTE NESTE FORMATO JSON (sem nada antes ou depois):
+
+{
+  "resumo": "texto aqui",
+  "tarefas": [{"descricao": "text", "responsavel": "nome", "prioridade": "Alta"}],
+  "combinados": [{"descricao": "text", "responsavel": "nome"}],
+  "insights": [{"descricao": "text", "responsavel": "nome"}],
+  "dataReuniao": "DD/MM/YYYY",
+  "horaReuniao": "HH:MM"
+}
+
+TRANSCRIÇÃO:
+${transcription}`
+          }
+        ]
       }),
     });
 
-    console.log('📥 Resposta recebida:', response.status, response.statusText);
-
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('❌ Erro da API:', errorData);
-      return res.status(500).json({ 
-        error: `Erro Claude (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`
+      console.error('❌ Erro Claude:', errorData);
+      return res.status(response.status).json({ 
+        error: `Erro Claude: ${errorData.error?.message || 'Desconhecido'}` 
       });
     }
 
     const data = await response.json();
-    console.log('📦 JSON recebido:', JSON.stringify(data).substring(0, 200));
+    const content = data.content?.[0]?.text || '';
 
-    const content = data.content?.[0]?.text;
+    console.log('📝 Resposta bruta:', content.substring(0, 300));
 
-    if (!content) {
-      console.error('❌ Sem conteúdo na resposta');
-      return res.status(500).json({ error: 'Resposta sem conteúdo' });
-    }
-
-    console.log('📄 Conteúdo extraído:', content.substring(0, 300));
-
-    // Procura JSON - tenta várias estratégias
-    let jsonStr = null;
+    // Estratégia 1: Procurar JSON puro entre { }
+    let jsonStr: string | null = null;
     
-    // Estratégia 1: JSON entre ``` ```
-    const jsonMarkdown = content.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonMarkdown) {
-      jsonStr = jsonMarkdown[1];
-      console.log('✅ JSON encontrado em markdown');
-    }
+    // Tira espaços em branco e procura o primeiro { até o último }
+    const trimmed = content.trim();
+    const firstBrace = trimmed.indexOf('{');
+    const lastBrace = trimmed.lastIndexOf('}');
     
-    // Estratégia 2: JSON bruto entre {}
-    if (!jsonStr) {
-      const jsonRaw = content.match(/\{[\s\S]*\}/);
-      if (jsonRaw) {
-        jsonStr = jsonRaw[0];
-        console.log('✅ JSON encontrado bruto');
-      }
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      jsonStr = trimmed.substring(firstBrace, lastBrace + 1);
+      console.log('✅ JSON encontrado entre { }');
     }
 
     if (!jsonStr) {
-      console.error('❌ JSON não encontrado. Resposta completa:', content);
-      return res.status(500).json({ error: `Resposta inválida: ${content.substring(0, 200)}` });
+      console.error('❌ Nenhum JSON encontrado em:', content);
+      return res.status(500).json({ 
+        error: `Resposta sem JSON: ${content.substring(0, 200)}` 
+      });
     }
 
-    console.log('🔍 Tentando parsear:', jsonStr.substring(0, 100));
-    const parsed = JSON.parse(jsonStr);
-    console.log('✅ JSON parseado com sucesso');
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+      console.log('✅ JSON parseado com sucesso');
+    } catch (parseError) {
+      console.error('❌ Erro ao parsear JSON:', parseError);
+      console.error('JSON problemático:', jsonStr.substring(0, 500));
+      return res.status(500).json({ 
+        error: `JSON inválido: ${parseError instanceof Error ? parseError.message : 'erro desconhecido'}` 
+      });
+    }
 
     // Validação e defaults
     const result = {
-      resumo: parsed.resumo || 'Resumo não extraído',
-      tarefas: Array.isArray(parsed.tarefas) ? parsed.tarefas : [],
-      combinados: Array.isArray(parsed.combinados) ? parsed.combinados : [],
-      insights: Array.isArray(parsed.insights) ? parsed.insights : [],
+      resumo: parsed.resumo || 'Sem resumo',
+      tarefas: Array.isArray(parsed.tarefas) ? parsed.tarefas.filter((t: any) => t.descricao) : [],
+      combinados: Array.isArray(parsed.combinados) ? parsed.combinados.filter((c: any) => c.descricao) : [],
+      insights: Array.isArray(parsed.insights) ? parsed.insights.filter((i: any) => i.descricao) : [],
       dataReuniao: parsed.dataReuniao || new Date().toLocaleDateString('pt-BR'),
       horaReuniao: parsed.horaReuniao || new Date().toTimeString().slice(0, 5),
     };
 
-    console.log('✅ SUCESSO!', {
-      tarefas: result.tarefas.length,
-      combinados: result.combinados.length,
-      insights: result.insights.length,
-    });
+    console.log('✅ SUCESSO!');
+    console.log('  - Tarefas:', result.tarefas.length);
+    console.log('  - Combinados:', result.combinados.length);
+    console.log('  - Insights:', result.insights.length);
 
     res.status(200).json(result);
 
   } catch (error) {
     console.error('❌ ERRO GERAL:', error);
     const msg = error instanceof Error ? error.message : String(error);
-    res.status(500).json({ error: `Erro: ${msg}` });
+    res.status(500).json({ error: `Erro ao processar: ${msg}` });
   }
 }
