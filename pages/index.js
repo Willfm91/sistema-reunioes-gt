@@ -169,89 +169,80 @@ export default function TaskAutomationSystem() {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
+    const marginLeft = 15;
+    const marginRight = 15;
+    const contentWidth = pageWidth - marginLeft - marginRight;
     let yPosition = 20;
 
     // Título
     doc.setFontSize(20);
     doc.setTextColor(26, 58, 82);
-    doc.text('Atividades Pendentes', 20, yPosition);
-    yPosition += 10;
+    doc.text('Atividades Pendentes', marginLeft, yPosition);
+    yPosition += 12;
 
     // Data de geração
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 20, yPosition);
-    yPosition += 10;
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, marginLeft, yPosition);
+    yPosition += 8;
 
     // Linha separadora
     doc.setDrawColor(200, 200, 200);
-    doc.line(20, yPosition, pageWidth - 20, yPosition);
+    doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
     yPosition += 8;
 
     // Tarefas
     tarefasParaExportar.forEach((task, index) => {
       // Verificar se precisa de nova página
-      if (yPosition > pageHeight - 40) {
+      if (yPosition > pageHeight - 30) {
         doc.addPage();
-        yPosition = 20;
+        yPosition = 15;
       }
 
-      // Número da tarefa
-      doc.setFontSize(11);
+      // Número e descrição da tarefa
+      doc.setFontSize(10);
       doc.setTextColor(26, 58, 82);
-      doc.text(`${index + 1}. ${task.descricao}`, 20, yPosition);
-      yPosition += 7;
+      const descricaoLines = doc.splitTextToSize(`${index + 1}. ${task.descricao}`, contentWidth - 5);
+      doc.text(descricaoLines, marginLeft + 5, yPosition);
+      yPosition += descricaoLines.length * 4.5 + 2;
 
       // Detalhes
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setTextColor(85, 85, 85);
-      doc.text(`Responsável: ${task.responsavel}`, 25, yPosition);
-      yPosition += 5;
-      doc.text(`Prioridade: ${task.prioridade}`, 25, yPosition);
-      yPosition += 5;
-      doc.text(`Data da Reunião: ${task.dataReuniao} às ${task.horaReuniao}`, 25, yPosition);
-      yPosition += 5;
-      doc.text(`Deadline: ${task.deadline || 'Não definido'}`, 25, yPosition);
-      yPosition += 5;
+      
+      const responsavelText = `Responsável: ${task.responsavel}`;
+      doc.text(responsavelText, marginLeft + 10, yPosition);
+      yPosition += 4;
+      
+      const prioridadeText = `Prioridade: ${task.prioridade}`;
+      doc.text(prioridadeText, marginLeft + 10, yPosition);
+      yPosition += 4;
+      
+      const dataReuniao = `Data da Reunião: ${task.dataReuniao} às ${task.horaReuniao}`;
+      doc.text(dataReuniao, marginLeft + 10, yPosition);
+      yPosition += 4;
+      
+      const deadline = `Deadline: ${task.deadline || 'Não definido'}`;
+      doc.text(deadline, marginLeft + 10, yPosition);
+      yPosition += 6;
 
       // Espaço entre tarefas
-      yPosition += 5;
       doc.setDrawColor(230, 230, 230);
-      doc.line(20, yPosition, pageWidth - 20, yPosition);
-      yPosition += 5;
+      doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
+      yPosition += 6;
     });
 
     // Rodapé
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text('TaskFlow by Willian Marins - Sistema de Gerenciamento de Atividades', 20, pageHeight - 10);
+    doc.text('TaskFlow by Willian Marins - Sistema de Gerenciamento de Atividades', marginLeft, pageHeight - 8);
 
     // Salvar
     doc.save(`TaskFlow_Atividades_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const Dashboard = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const atrasadas = tasks.filter(t => {
-      if (t.status === 'Concluído') return false;
-      if (!t.deadline) return false;
-      const deadlineDate = new Date(t.deadline);
-      deadlineDate.setHours(0, 0, 0, 0);
-      return deadlineDate < today;
-    }).length;
-
-    // Tarefas concluídas com atraso
-    const concluidasComAtraso = tasks.filter(t => t.status === 'Concluído' && t.diasAtraso > 0);
-    const mediaAtraso = concluidasComAtraso.length > 0 
-      ? (concluidasComAtraso.reduce((sum, t) => sum + t.diasAtraso, 0) / concluidasComAtraso.length).toFixed(1)
-      : 0;
-
-    const concluidas = tasks.filter(t => t.status === 'Concluído').length;
-    const emProgresso = tasks.filter(t => t.status === 'Não Iniciado' || t.status === 'Em Progresso').length;
-
-    // Filtro de datas
+    // Filtro de datas - PRIMEIRO calcula as filtradas
     const tarefasFiltradas = tasks.filter(t => {
       // Filtro de status: Em Aberto ou Concluídas
       if (filterStatus === 'aberto' && t.status === 'Concluído') return false;
@@ -269,6 +260,28 @@ export default function TaskAutomationSystem() {
       
       return true;
     });
+
+    // DEPOIS calcula os KPIs baseado nas filtradas
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const atrasadas = tarefasFiltradas.filter(t => {
+      if (t.status === 'Concluído') return false;
+      if (!t.deadline) return false;
+      const deadlineDate = new Date(t.deadline);
+      deadlineDate.setHours(0, 0, 0, 0);
+      return deadlineDate < today;
+    }).length;
+
+    // Tarefas concluídas com atraso (das filtradas)
+    const concluidasComAtraso = tarefasFiltradas.filter(t => t.status === 'Concluído' && t.diasAtraso > 0);
+    const mediaAtraso = concluidasComAtraso.length > 0 
+      ? (concluidasComAtraso.reduce((sum, t) => sum + t.diasAtraso, 0) / concluidasComAtraso.length).toFixed(1)
+      : 0;
+
+    const concluidas = tarefasFiltradas.filter(t => t.status === 'Concluído').length;
+    const emProgresso = tarefasFiltradas.filter(t => t.status === 'Não Iniciado' || t.status === 'Em Progresso').length;
+    const total = tarefasFiltradas.length;
 
     return (
       <div className="space-y-6">
@@ -355,7 +368,7 @@ export default function TaskAutomationSystem() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="p-4 rounded-lg border" style={{ backgroundColor: '#F0F8FF', borderColor: '#1A3A52' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#1A3A52' }}>Total</div>
-            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{tasks.length}</div>
+            <div className="text-2xl font-bold" style={{ color: '#1A3A52' }}>{total}</div>
           </div>
           <div className="p-4 rounded-lg border" style={{ backgroundColor: '#F0FFF4', borderColor: '#2ECC71' }}>
             <div className="text-sm font-medium mb-1" style={{ color: '#2ECC71' }}>Concluídas</div>
