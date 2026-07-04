@@ -166,6 +166,16 @@ export default function TaskAutomationSystem() {
       return;
     }
 
+    // Agrupar por responsável
+    const tarefasPorResponsavel = {};
+    tarefasParaExportar.forEach(task => {
+      const responsavel = task.responsavel || 'Sem responsável';
+      if (!tarefasPorResponsavel[responsavel]) {
+        tarefasPorResponsavel[responsavel] = [];
+      }
+      tarefasPorResponsavel[responsavel].push(task);
+    });
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -173,63 +183,69 @@ export default function TaskAutomationSystem() {
     const marginRight = 15;
     const contentWidth = pageWidth - marginLeft - marginRight;
     let yPosition = 20;
+    let contador = 1;
 
-    // Título
-    doc.setFontSize(20);
-    doc.setTextColor(26, 58, 82);
-    doc.text('Atividades Pendentes', marginLeft, yPosition);
-    yPosition += 12;
-
-    // Data de geração
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, marginLeft, yPosition);
-    yPosition += 8;
-
-    // Linha separadora
-    doc.setDrawColor(200, 200, 200);
-    doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
-    yPosition += 8;
-
-    // Tarefas
-    tarefasParaExportar.forEach((task, index) => {
-      // Verificar se precisa de nova página
-      if (yPosition > pageHeight - 30) {
+    // Para cada responsável
+    Object.keys(tarefasPorResponsavel).forEach((responsavel, indexResp) => {
+      const tarefasResponsavel = tarefasPorResponsavel[responsavel];
+      
+      // Se não é a primeira página e há espaço insuficiente, nova página
+      if (indexResp > 0 && yPosition > pageHeight - 60) {
         doc.addPage();
         yPosition = 15;
       }
 
-      // Número e descrição da tarefa
-      doc.setFontSize(10);
+      // Título com responsável
+      doc.setFontSize(14);
       doc.setTextColor(26, 58, 82);
-      const descricaoLines = doc.splitTextToSize(`${index + 1}. ${task.descricao}`, contentWidth - 5);
-      doc.text(descricaoLines, marginLeft + 5, yPosition);
-      yPosition += descricaoLines.length * 4.5 + 2;
-
-      // Detalhes
-      doc.setFontSize(8);
-      doc.setTextColor(85, 85, 85);
-      
-      const responsavelText = `Responsável: ${task.responsavel}`;
-      doc.text(responsavelText, marginLeft + 10, yPosition);
-      yPosition += 4;
-      
-      const prioridadeText = `Prioridade: ${task.prioridade}`;
-      doc.text(prioridadeText, marginLeft + 10, yPosition);
-      yPosition += 4;
-      
-      const dataReuniao = `Data da Reunião: ${task.dataReuniao} às ${task.horaReuniao}`;
-      doc.text(dataReuniao, marginLeft + 10, yPosition);
-      yPosition += 4;
-      
-      const deadline = `Deadline: ${task.deadline || 'Não definido'}`;
-      doc.text(deadline, marginLeft + 10, yPosition);
+      doc.setFont(undefined, 'bold');
+      const primeiraData = tarefasResponsavel[0].dataReuniao;
+      doc.text(`Atividades Pendentes | ${responsavel}`, marginLeft, yPosition);
       yPosition += 6;
+      
+      // Data da reunião
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Data da reunião: ${primeiraData}`, marginLeft, yPosition);
+      yPosition += 8;
 
-      // Espaço entre tarefas
-      doc.setDrawColor(230, 230, 230);
+      // Linha separadora
+      doc.setDrawColor(200, 200, 200);
       doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
-      yPosition += 6;
+      yPosition += 8;
+
+      // Tarefas deste responsável
+      tarefasResponsavel.forEach((task, indexTask) => {
+        // Verificar se precisa de nova página
+        if (yPosition > pageHeight - 25) {
+          doc.addPage();
+          yPosition = 15;
+        }
+
+        // Atividade
+        doc.setFontSize(9);
+        doc.setTextColor(26, 58, 82);
+        doc.setFont(undefined, 'normal');
+        const atividadeText = `${contador}. ${task.descricao}`;
+        const atividadeLines = doc.splitTextToSize(atividadeText, contentWidth - 5);
+        doc.text(atividadeLines, marginLeft + 5, yPosition);
+        yPosition += atividadeLines.length * 4 + 2;
+
+        // Deadline
+        doc.setFontSize(8);
+        doc.setTextColor(85, 85, 85);
+        const deadlineText = `Deadline: ${task.deadline || 'Não definido'}`;
+        doc.text(deadlineText, marginLeft + 10, yPosition);
+        yPosition += 6;
+
+        // Espaço entre tarefas
+        yPosition += 2;
+        contador++;
+      });
+
+      // Espaço entre responsáveis
+      yPosition += 4;
     });
 
     // Rodapé
