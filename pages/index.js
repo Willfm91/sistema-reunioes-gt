@@ -126,10 +126,36 @@ export default function TaskAutomationSystem() {
       diasAtraso: 0
     }));
 
+    // Adicionar tarefas
     setTasks([...tasks, ...newTasks]);
+
+    // Adicionar combinados (se existirem)
+    if (processedData.combinados && processedData.combinados.length > 0) {
+      const newCombinados = processedData.combinados.map((c, idx) => ({
+        id: Date.now() + 10000 + idx,
+        descricao: c.descricao,
+        responsavel: c.responsavel || 'Geral',
+        dataReuniao: processedData.dataReuniao,
+        horaReuniao: processedData.horaReuniao
+      }));
+      setCombinados([...combinados, ...newCombinados]);
+    }
+
+    // Adicionar insights (se existirem)
+    if (processedData.insights && processedData.insights.length > 0) {
+      const newInsights = processedData.insights.map((i, idx) => ({
+        id: Date.now() + 20000 + idx,
+        descricao: i.descricao,
+        responsavel: i.responsavel || 'Geral',
+        dataReuniao: processedData.dataReuniao,
+        horaReuniao: processedData.horaReuniao
+      }));
+      setInsights([...insights, ...newInsights]);
+    }
+
     setProcessedData(null);
     setTranscription('');
-    alert('Tarefas adicionadas ao dashboard!');
+    alert('Tarefas, combinados e insights adicionados!');
   };
 
   const updatePrioridade = (taskId, novaPrioridade) => {
@@ -193,7 +219,17 @@ export default function TaskAutomationSystem() {
     return [...new Set(responsaveis)].filter(Boolean);
   };
 
-  const generatePDFWithTasks = (tarefasParaExportar) => {
+  const clearAllData = () => {
+    if (confirm('Tem certeza que quer deletar TODAS as atividades, combinados e insights? Esta ação não pode ser desfeita!')) {
+      setTasks([]);
+      setCombinados([]);
+      setInsights([]);
+      localStorage.removeItem('tasks');
+      localStorage.removeItem('combinados');
+      localStorage.removeItem('insights');
+      alert('Todos os dados foram deletados!');
+    }
+  };
     if (tarefasParaExportar.length === 0) {
       alert('Nenhuma tarefa para exportar com os filtros selecionados!');
       return;
@@ -476,23 +512,32 @@ export default function TaskAutomationSystem() {
                       <div className="mt-2 flex gap-2 flex-wrap">
                         {editingPrioridade === task.id ? (
                           <div className="relative inline-block" data-prioridade-dropdown>
-                            <div className="absolute top-0 left-0 bg-white border border-gray-300 rounded shadow-lg z-10">
+                            <div className="absolute top-0 left-0 bg-white border-2 border-orange-400 rounded shadow-lg z-10" style={{ borderColor: '#FF9500' }}>
                               {['Alta', 'Média', 'Baixa'].map(p => (
                                 <div
                                   key={p}
-                                  onClick={() => updatePrioridade(task.id, p)}
-                                  className="px-4 py-2 cursor-pointer hover:bg-gray-100 text-sm"
-                                  style={{ color: p === 'Alta' ? '#E63946' : p === 'Média' ? '#FF9500' : '#1A3A52' }}
+                                  onClick={() => {
+                                    updatePrioridade(task.id, p);
+                                    setEditingPrioridade(task.id);
+                                  }}
+                                  className="px-4 py-2 cursor-pointer text-sm transition"
+                                  style={{ 
+                                    color: p === 'Alta' ? '#E63946' : p === 'Média' ? '#FF9500' : '#1A3A52',
+                                    backgroundColor: task.prioridade === p ? '#FFF9F0' : '#FFFFFF'
+                                  }}
+                                  onMouseEnter={(e) => e.target.style.backgroundColor = '#F5F5F5'}
+                                  onMouseLeave={(e) => e.target.style.backgroundColor = task.prioridade === p ? '#FFF9F0' : '#FFFFFF'}
                                 >
-                                  {p}
+                                  {p === task.prioridade ? '✓ ' : '  '}{p}
                                 </div>
                               ))}
                             </div>
                             <span 
-                              className="px-3 py-1 rounded text-xs font-medium cursor-pointer"
+                              className="px-3 py-1 rounded text-xs font-medium"
                               style={{
                                 backgroundColor: task.prioridade === 'Alta' ? '#FFE6E6' : task.prioridade === 'Média' ? '#FFF9F0' : '#F0F8FF',
-                                color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52'
+                                color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52',
+                                border: '2px solid #FF9500'
                               }}
                             >
                               {task.prioridade}
@@ -764,9 +809,23 @@ export default function TaskAutomationSystem() {
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ boxShadow: '0 4px 20px rgba(0, 82, 255, 0.15)' }}>
           <div className="text-white p-8" style={{ background: 'linear-gradient(135deg, #1A3A52 0%, #2D5A7B 100%)' }}>
-            <h1 className="text-4xl font-bold mb-1">TaskFlow</h1>
-            <p className="text-base mb-3 opacity-90">by Willian Marins</p>
-            <p className="text-base opacity-95">Processe transcrições, extraia tarefas e acompanhe prazos automaticamente</p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-4xl font-bold mb-1">TaskFlow</h1>
+                <p className="text-base mb-3 opacity-90">by Willian Marins</p>
+                <p className="text-base opacity-95">Processe transcrições, extraia tarefas e acompanhe prazos automaticamente</p>
+              </div>
+              <button
+                onClick={clearAllData}
+                className="px-4 py-2 rounded text-sm font-semibold transition text-red-600"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+                title="Deletar tudo"
+              >
+                Limpar Tudo
+              </button>
+            </div>
           </div>
 
           <div className="border-b border-slate-200 flex">
