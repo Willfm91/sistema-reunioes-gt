@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, Settings, Filter, Edit2, Trash2, Download, CheckCircle, Lightbulb } from 'lucide-react';
+import { BarChart3, Settings, Filter, Edit2, Trash2, Download, CheckCircle, Lightbulb, Plus } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('processor');
   const [tasks, setTasks] = useState([]);
   const [combinados, setCombinados] = useState([]);
   const [insights, setInsights] = useState([]);
@@ -24,6 +24,13 @@ export default function Home() {
     deadline: '',
     deliveryDate: '',
     responsavel: ''
+  });
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [newTaskData, setNewTaskData] = useState({
+    descricao: '',
+    responsavel: '',
+    prioridade: 'Média',
+    deadline: ''
   });
 
   // Carregar dados do localStorage
@@ -78,6 +85,32 @@ export default function Home() {
     }
   }, [insights]);
 
+  const createNewTask = () => {
+    if (!newTaskData.descricao.trim()) {
+      alert('Descreva a atividade');
+      return;
+    }
+
+    const novaTask = {
+      id: Date.now(),
+      descricao: newTaskData.descricao,
+      responsavel: newTaskData.responsavel || 'Sem responsável',
+      prioridade: newTaskData.prioridade,
+      dataReuniao: new Date().toISOString().split('T')[0],
+      horaReuniao: new Date().toTimeString().split(' ')[0].substring(0, 5),
+      resumo: '',
+      deadline: newTaskData.deadline,
+      dataEntrega: '',
+      status: 'Em Progresso',
+      diasAtraso: 0
+    };
+
+    setTasks([...tasks, novaTask]);
+    setNewTaskData({ descricao: '', responsavel: '', prioridade: 'Média', deadline: '' });
+    setShowCreateTask(false);
+    alert('Atividade criada!');
+  };
+
   const processTranscription = async () => {
     if (!transcription.trim()) {
       alert('Cole a transcrição antes de processar');
@@ -130,6 +163,7 @@ export default function Home() {
         horaReuniao: processedData.horaReuniao
       }));
       setCombinados([...combinados, ...newCombinados]);
+      console.log('Combinados adicionados:', newCombinados);
     }
 
     if (processedData.insights && processedData.insights.length > 0) {
@@ -141,6 +175,7 @@ export default function Home() {
         horaReuniao: processedData.horaReuniao
       }));
       setInsights([...insights, ...newInsights]);
+      console.log('Insights adicionados:', newInsights);
     }
 
     setProcessedData(null);
@@ -430,6 +465,21 @@ export default function Home() {
     setEditingResponsavel(null);
   };
 
+  const updateDeliveryDate = (taskId, newDate) => {
+    setTasks(tasks.map(task => {
+      if (task.id === taskId) {
+        let newStatus = task.status;
+        if (newDate) {
+          newStatus = 'Concluído';
+        } else {
+          newStatus = 'Em Progresso';
+        }
+        return { ...task, dataEntrega: newDate, status: newStatus };
+      }
+      return task;
+    }));
+  };
+
   const saveTaskChanges = () => {
     if (!formData.taskId) return;
 
@@ -466,6 +516,22 @@ export default function Home() {
     setTasks(tasks.filter(task => task.id !== id));
     setDeleteConfirm(null);
   };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (editingTask) setEditingTask(null);
+      if (editingResponsavel) setEditingResponsavel(null);
+      if (openPrioridadeDropdown) setOpenPrioridadeDropdown(null);
+      if (showCreateTask) setShowCreateTask(false);
+      if (deleteConfirm) setDeleteConfirm(null);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editingTask, editingResponsavel, openPrioridadeDropdown, showCreateTask, deleteConfirm]);
 
   const Dashboard = () => {
     const tarefasFiltradas = tasks.filter(task => {
@@ -565,6 +631,9 @@ export default function Home() {
         </div>
 
         <div className="flex gap-2 mb-4">
+          <button onClick={() => setShowCreateTask(true)} className="px-4 py-2 rounded text-sm font-semibold text-white transition" style={{ backgroundColor: '#FF9500' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'} onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}>
+            + Criar Atividade
+          </button>
           <button onClick={() => generatePDFWithTasks(tarefasFiltradas)} className="px-4 py-2 rounded text-sm font-semibold text-white transition" style={{ backgroundColor: '#1A3A52' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#0F1A29'} onMouseLeave={(e) => e.target.style.backgroundColor = '#1A3A52'}>
             Exportar PDF
           </button>
@@ -578,81 +647,75 @@ export default function Home() {
           ) : (
             tarefasFiltradas.map(task => (
               <div key={task.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                  <div className="lg:col-span-2">
                     <p className="font-semibold" style={{ color: '#1A3A52' }}>{task.descricao}</p>
-                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Responsável: <span className="font-semibold">{editingResponsavel === task.id ? (<input type="text" value={formData.responsavel} onChange={(e) => setFormData({...formData, responsavel: e.target.value})} autoFocus className="px-2 py-1 rounded" style={{ border: '1px solid #FF9500' }} onBlur={() => {updateResponsavel(task.id, formData.responsavel || task.responsavel); setFormData({...formData, responsavel: ''});}} />) : (<span onClick={() => {setEditingResponsavel(task.id); setFormData({...formData, responsavel: task.responsavel});}} className="cursor-pointer" title="Clique para editar">{task.responsavel}</span>)}</span></p>
                   </div>
-                  <div>
-                    <p className="text-sm" style={{ color: '#555555' }}>Prioridade:</p>
-                    <div className="relative mt-1">
-                      <div 
-                        onClick={() => setOpenPrioridadeDropdown(openPrioridadeDropdown === task.id ? null : task.id)}
-                        className="px-3 py-1 rounded text-xs font-medium cursor-pointer" 
-                        style={{ 
-                          backgroundColor: task.prioridade === 'Alta' ? '#FFE6E6' : task.prioridade === 'Média' ? '#FFF9F0' : '#F0F8FF',
-                          color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52',
-                          border: '2px solid #FF9500'
-                        }}
-                      >
-                        {task.prioridade}
-                      </div>
-                      {openPrioridadeDropdown === task.id && (
-                        <div className="absolute top-full mt-1 bg-white border-2 rounded shadow-lg z-10" style={{ borderColor: '#FF9500', minWidth: '100px' }}>
-                          {['Alta', 'Média', 'Baixa'].map(p => (
-                            <div
-                              key={p}
-                              onClick={() => updatePrioridade(task.id, p)}
-                              className="px-4 py-2 cursor-pointer text-sm transition"
-                              style={{ 
-                                color: p === 'Alta' ? '#E63946' : p === 'Média' ? '#FF9500' : '#1A3A52',
-                                backgroundColor: task.prioridade === p ? '#FFF9F0' : '#FFFFFF'
-                              }}
-                              onMouseEnter={(e) => e.target.style.backgroundColor = '#F5F5F5'}
-                              onMouseLeave={(e) => e.target.style.backgroundColor = task.prioridade === p ? '#FFF9F0' : '#FFFFFF'}
-                            >
-                              {p === task.prioridade ? '✓ ' : '  '}{p}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Deadline: <span className="font-semibold">{task.deadline || 'Sem data'}</span></p>
-                  </div>
-                  <div>
-                    <p className="text-sm" style={{ color: '#555555' }}>Status: <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: task.status === 'Concluído' ? '#E6F9F0' : '#FFF3E0', color: task.status === 'Concluído' ? '#2ECC71' : '#FF9500' }}>{task.status}</span></p>
-                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Entrega: <span className="font-semibold">{task.dataEntrega || '-'}</span></p>
-                  </div>
-                  <div>
-                    <div className="flex gap-2">
-                      <button onClick={() => {setEditingTask(task.id); setFormData({taskId: task.id, deadline: task.deadline, deliveryDate: task.dataEntrega, responsavel: task.responsavel});}} className="text-sm font-medium" style={{ color: '#4A90E2' }}>Editar</button>
-                      <button onClick={() => deleteTask(task.id)} className="text-sm font-medium" style={{ color: '#E63946' }}>Deletar</button>
+                  <div></div>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <span style={{ color: '#555555' }} className="text-sm">Responsável:</span>
+                      <span className="font-semibold" style={{ color: '#1A3A52' }}>{editingResponsavel === task.id ? (<input type="text" value={formData.responsavel} onChange={(e) => setFormData({...formData, responsavel: e.target.value})} autoFocus className="px-2 py-1 rounded text-sm" style={{ border: '1px solid #FF9500' }} onBlur={() => {updateResponsavel(task.id, formData.responsavel || task.responsavel); setFormData({...formData, responsavel: ''});}} />) : (<span onClick={() => {setEditingResponsavel(task.id); setFormData({...formData, responsavel: task.responsavel});}} className="cursor-pointer text-sm">{task.responsavel}</span>)}</span>
                     </div>
                   </div>
                 </div>
 
-                {editingTask === task.id && (
-                  <div className="mt-4 pt-4 border-t" style={{ borderColor: '#E0E0E0' }}>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Deadline:</label>
-                        <input type="date" value={formData.deadline} onChange={(e) => setFormData({...formData, deadline: e.target.value})} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #FF9500', backgroundColor: '#FFFFFF' }} />
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-3">
+                  <div className="lg:col-span-2"></div>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span style={{ color: '#555555' }}>Prioridade:</span>
+                      <div className="relative">
+                        <div 
+                          onClick={() => setOpenPrioridadeDropdown(openPrioridadeDropdown === task.id ? null : task.id)}
+                          className="px-2 py-1 rounded text-xs font-medium cursor-pointer" 
+                          style={{ 
+                            backgroundColor: task.prioridade === 'Alta' ? '#FFE6E6' : task.prioridade === 'Média' ? '#FFF9F0' : '#F0F8FF',
+                            color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52',
+                            border: '2px solid #FF9500'
+                          }}
+                        >
+                          {task.prioridade}
+                        </div>
+                        {openPrioridadeDropdown === task.id && (
+                          <div className="absolute top-full mt-1 bg-white border-2 rounded shadow-lg z-10" style={{ borderColor: '#FF9500', minWidth: '100px' }}>
+                            {['Alta', 'Média', 'Baixa'].map(p => (
+                              <div
+                                key={p}
+                                onClick={() => updatePrioridade(task.id, p)}
+                                className="px-4 py-2 cursor-pointer text-sm transition"
+                                style={{ 
+                                  color: p === 'Alta' ? '#E63946' : p === 'Média' ? '#FF9500' : '#1A3A52',
+                                  backgroundColor: task.prioridade === p ? '#FFF9F0' : '#FFFFFF'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#F5F5F5'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = task.prioridade === p ? '#FFF9F0' : '#FFFFFF'}
+                              >
+                                {p === task.prioridade ? '✓ ' : '  '}{p}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Data de Entrega:</label>
-                        <input type="date" value={formData.deliveryDate} onChange={(e) => setFormData({...formData, deliveryDate: e.target.value})} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #FF9500', backgroundColor: '#FFFFFF' }} />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Responsável:</label>
-                        <input type="text" value={formData.responsavel} onChange={(e) => setFormData({...formData, responsavel: e.target.value})} className="w-full px-3 py-2 rounded text-sm" style={{ border: '1px solid #FF9500', backgroundColor: '#FFFFFF' }} />
-                      </div>
-                    </div>
-                    <div className="flex gap-2 mt-4">
-                      <button onClick={saveTaskChanges} className="px-4 py-2 rounded text-sm font-semibold text-white transition" style={{ backgroundColor: '#2ECC71' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#25B85F'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2ECC71'}>Salvar</button>
-                      <button onClick={() => setEditingTask(null)} className="px-4 py-2 rounded text-sm font-semibold transition" style={{ backgroundColor: '#CCCCCC', color: '#555555' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#AAAAAA'} onMouseLeave={(e) => e.target.style.backgroundColor = '#CCCCCC'}>Cancelar</button>
                     </div>
                   </div>
-                )}
+                  <div className="flex justify-end">
+                    <button onClick={() => deleteTask(task.id)} className="text-sm font-medium" style={{ color: '#E63946' }}>
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-3">
+                  <div className="lg:col-span-2"></div>
+                  <div className="flex flex-col gap-2">
+                    <div className="text-sm" style={{ color: '#555555' }}>Deadline: <span className="font-semibold">{task.deadline || 'Sem data'}</span></div>
+                    <div className="text-sm" style={{ color: '#555555' }}>Status: <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: task.status === 'Concluído' ? '#E6F9F0' : '#FFF3E0', color: task.status === 'Concluído' ? '#2ECC71' : '#FF9500' }}>{task.status}</span></div>
+                  </div>
+                  <div className="flex justify-end">
+                    <input type="date" value={task.dataEntrega} onChange={(e) => updateDeliveryDate(task.id, e.target.value)} className="px-2 py-1 rounded text-xs" style={{ border: '1px solid #FF9500', backgroundColor: '#FFFFFF', color: '#1A3A52' }} title="Data de Entrega" />
+                  </div>
+                </div>
               </div>
             ))
           )}
@@ -662,15 +725,24 @@ export default function Home() {
           <div className="border-2 rounded-lg p-6" style={{ borderColor: '#FF9500', backgroundColor: '#FFF9F0' }}>
             <h3 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Prévia do Processamento</h3>
             <p className="mb-3" style={{ color: '#555555' }}><strong>Resumo:</strong> {processedData.resumo}</p>
-            <p className="mb-3 text-sm" style={{ color: '#555555' }}>Tarefas encontradas: {processedData.tarefas.length}</p>
+            <p className="mb-3 text-sm" style={{ color: '#555555' }}><strong>Atividades ({processedData.tarefas.length}):</strong></p>
+            <div className="mb-4 space-y-2 pl-4 max-h-48 overflow-y-auto">
+              {processedData.tarefas.map((t, idx) => (
+                <div key={idx} style={{ color: '#555555' }} className="text-sm">
+                  <strong>{idx + 1}. {t.descricao}</strong>
+                  <br />
+                  <span>Responsável: {t.responsavel} | Prioridade: {t.prioridade}</span>
+                </div>
+              ))}
+            </div>
             {processedData.combinados && processedData.combinados.length > 0 && (
-              <p className="mb-3 text-sm" style={{ color: '#555555' }}>Combinados encontrados: {processedData.combinados.length}</p>
+              <p className="mb-2 text-sm" style={{ color: '#555555' }}>Combinados encontrados: {processedData.combinados.length}</p>
             )}
             {processedData.insights && processedData.insights.length > 0 && (
               <p className="mb-3 text-sm" style={{ color: '#555555' }}>Insights encontrados: {processedData.insights.length}</p>
             )}
             <button onClick={addTasksToBoard} className="w-full text-white py-3 rounded-lg font-semibold transition" style={{ backgroundColor: '#2ECC71' }}>
-              Adicionar Tarefas ao Dashboard
+              Concluir
             </button>
           </div>
         )}
@@ -751,17 +823,21 @@ export default function Home() {
           ) : (
             combinadosFiltrados.map(combinado => (
               <div key={combinado.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                  <div className="lg:col-span-2">
                     <p className="font-semibold" style={{ color: '#1A3A52' }}>{combinado.descricao}</p>
-                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Pessoa: <span className="font-semibold">{combinado.responsavel}</span></p>
                   </div>
-                  <div>
-                    <p className="text-sm" style={{ color: '#555555' }}>Data: <span className="font-semibold">{combinado.dataReuniao}</span></p>
-                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Hora: <span className="font-semibold">{combinado.horaReuniao}</span></p>
+                  <div className="flex flex-col">
+                    <p className="text-sm" style={{ color: '#555555' }}>Pessoa: <span className="font-semibold">{combinado.responsavel}</span></p>
                   </div>
-                  <div className="flex justify-end items-start">
-                    <button onClick={() => deleteCombinado(combinado.id)} className="text-sm font-medium" style={{ color: '#E63946' }}>Deletar</button>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm" style={{ color: '#555555' }}>Data: <span className="font-semibold">{combinado.dataReuniao}</span></p>
+                      <p className="text-sm mt-1" style={{ color: '#555555' }}>Hora: <span className="font-semibold">{combinado.horaReuniao}</span></p>
+                    </div>
+                    <button onClick={() => deleteCombinado(combinado.id)} style={{ color: '#E63946' }}>
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -845,17 +921,21 @@ export default function Home() {
           ) : (
             insightsFiltrados.map(insight => (
               <div key={insight.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                  <div className="lg:col-span-2">
                     <p className="font-semibold" style={{ color: '#1A3A52' }}>{insight.descricao}</p>
-                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Pessoa: <span className="font-semibold">{insight.responsavel}</span></p>
                   </div>
-                  <div>
-                    <p className="text-sm" style={{ color: '#555555' }}>Data: <span className="font-semibold">{insight.dataReuniao}</span></p>
-                    <p className="text-sm mt-2" style={{ color: '#555555' }}>Hora: <span className="font-semibold">{insight.horaReuniao}</span></p>
+                  <div className="flex flex-col">
+                    <p className="text-sm" style={{ color: '#555555' }}>Pessoa: <span className="font-semibold">{insight.responsavel}</span></p>
                   </div>
-                  <div className="flex justify-end items-start">
-                    <button onClick={() => deleteInsight(insight.id)} className="text-sm font-medium" style={{ color: '#E63946' }}>Deletar</button>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm" style={{ color: '#555555' }}>Data: <span className="font-semibold">{insight.dataReuniao}</span></p>
+                      <p className="text-sm mt-1" style={{ color: '#555555' }}>Hora: <span className="font-semibold">{insight.horaReuniao}</span></p>
+                    </div>
+                    <button onClick={() => deleteInsight(insight.id)} style={{ color: '#E63946' }}>
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -868,7 +948,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Roboto, sans-serif' }}>
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ boxShadow: '0 4px 20px rgba(0, 82, 255, 0.15)' }}>
           <div className="text-white p-8" style={{ background: 'linear-gradient(135deg, #1A3A52 0%, #2D5A7B 100%)' }}>
             <div className="flex justify-between items-start">
@@ -883,8 +963,8 @@ export default function Home() {
 
           <div className="border-b border-slate-200 flex">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
               { id: 'processor', label: 'Processar', icon: Settings },
+              { id: 'tarefas', label: 'Tarefas', icon: BarChart3 },
               { id: 'combinados', label: 'Combinados', icon: CheckCircle },
               { id: 'insights', label: 'Insights', icon: Lightbulb }
             ].map(tab => {
@@ -899,14 +979,14 @@ export default function Home() {
           </div>
 
           <div className="p-6">
-            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'tarefas' && <Dashboard />}
 
             {activeTab === 'combinados' && <Combinados />}
 
             {activeTab === 'insights' && <Insights />}
 
             {activeTab === 'processor' && (
-              <div className="max-w-2xl mx-auto space-y-6">
+              <div className="max-w-4xl mx-auto space-y-6">
                 <div className="border-2 rounded-lg p-6" style={{ borderColor: '#FF9500', backgroundColor: '#FFF9F0' }}>
                   <h2 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Cole a Transcrição</h2>
                   <p className="text-sm mb-3" style={{ color: '#555555' }}>Abra o vídeo da reunião no Google Drive → Clique em "Transcrição" → Copie e cole aqui</p>
@@ -919,16 +999,25 @@ export default function Home() {
                 {processedData && (
                   <div className="border-2 rounded-lg p-6" style={{ borderColor: '#FF9500', backgroundColor: '#FFF9F0' }}>
                     <h3 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Prévia do Processamento</h3>
-                    <p className="mb-3" style={{ color: '#555555' }}><strong>Resumo:</strong> {processedData.resumo}</p>
-                    <p className="mb-3 text-sm" style={{ color: '#555555' }}>Tarefas encontradas: {processedData.tarefas.length}</p>
+                    <p className="mb-4" style={{ color: '#555555' }}><strong>Resumo:</strong> {processedData.resumo}</p>
+                    <p className="mb-2 text-sm font-semibold" style={{ color: '#1A3A52' }}>Atividades ({processedData.tarefas.length}):</p>
+                    <div className="mb-4 space-y-2 pl-4 max-h-48 overflow-y-auto">
+                      {processedData.tarefas.map((t, idx) => (
+                        <div key={idx} style={{ color: '#555555' }} className="text-sm">
+                          <strong>{idx + 1}. {t.descricao}</strong>
+                          <br />
+                          <span>Responsável: {t.responsavel} | Prioridade: {t.prioridade}</span>
+                        </div>
+                      ))}
+                    </div>
                     {processedData.combinados && processedData.combinados.length > 0 && (
-                      <p className="mb-3 text-sm" style={{ color: '#555555' }}>Combinados encontrados: {processedData.combinados.length}</p>
+                      <p className="mb-2 text-sm" style={{ color: '#555555' }}>Combinados encontrados: {processedData.combinados.length}</p>
                     )}
                     {processedData.insights && processedData.insights.length > 0 && (
                       <p className="mb-3 text-sm" style={{ color: '#555555' }}>Insights encontrados: {processedData.insights.length}</p>
                     )}
                     <button onClick={addTasksToBoard} className="w-full text-white py-3 rounded-lg font-semibold transition" style={{ backgroundColor: '#2ECC71' }}>
-                      Adicionar Tarefas ao Dashboard
+                      Concluir
                     </button>
                   </div>
                 )}
@@ -937,6 +1026,44 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {showCreateTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm" style={{ boxShadow: '0 10px 40px rgba(26, 58, 82, 0.2)' }}>
+            <h3 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Criar Nova Atividade</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Descrição:</label>
+                <input type="text" value={newTaskData.descricao} onChange={(e) => setNewTaskData({...newTaskData, descricao: e.target.value})} placeholder="Descreva a atividade..." className="w-full px-3 py-2 border rounded" style={{ borderColor: '#FF9500' }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Responsável:</label>
+                <input type="text" value={newTaskData.responsavel} onChange={(e) => setNewTaskData({...newTaskData, responsavel: e.target.value})} placeholder="Nome da pessoa..." className="w-full px-3 py-2 border rounded" style={{ borderColor: '#FF9500' }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Prioridade:</label>
+                <select value={newTaskData.prioridade} onChange={(e) => setNewTaskData({...newTaskData, prioridade: e.target.value})} className="w-full px-3 py-2 border rounded" style={{ borderColor: '#FF9500' }}>
+                  <option value="Alta">Alta</option>
+                  <option value="Média">Média</option>
+                  <option value="Baixa">Baixa</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Deadline (opcional):</label>
+                <input type="date" value={newTaskData.deadline} onChange={(e) => setNewTaskData({...newTaskData, deadline: e.target.value})} className="w-full px-3 py-2 border rounded" style={{ borderColor: '#FF9500' }} />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={createNewTask} className="flex-1 text-white py-2 rounded-lg font-semibold transition" style={{ backgroundColor: '#2ECC71' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#25B85F'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2ECC71'}>
+                Criar
+              </button>
+              <button onClick={() => {setShowCreateTask(false); setNewTaskData({ descricao: '', responsavel: '', prioridade: 'Média', deadline: '' });}} className="flex-1 py-2 rounded-lg font-semibold transition" style={{ backgroundColor: '#CCCCCC', color: '#555555' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#AAAAAA'} onMouseLeave={(e) => e.target.style.backgroundColor = '#CCCCCC'}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
