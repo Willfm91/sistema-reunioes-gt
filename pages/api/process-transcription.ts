@@ -30,24 +30,14 @@ export default async function handler(
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
+        max_tokens: 1000,
         messages: [
           {
             role: 'user',
-            content: `Extraia dados desta transcrição em JSON:
+            content: `Transcrição: ${transcription}
 
-${transcription}
-
-JSON com TAREFAS (o que fazer, quem faz, prioridade), COMBINADOS (decisões), INSIGHTS (problemas):
-
-{
-  "resumo": "resumo breve",
-  "tarefas": [{"descricao": "ação", "responsavel": "nome", "prioridade": "Alta"}],
-  "combinados": [{"descricao": "decisão", "responsavel": "nome"}],
-  "insights": [{"descricao": "problema/oportunidade", "responsavel": "nome"}],
-  "dataReuniao": "01/01/2026",
-  "horaReuniao": "10:00"
-}`
+Retorne apenas este JSON válido (sem markdown, sem texto extra):
+{"resumo":"","tarefas":[],"combinados":[],"insights":[],"dataReuniao":"01/01/2026","horaReuniao":"10:00"}`
           }
         ]
       }),
@@ -61,7 +51,7 @@ JSON com TAREFAS (o que fazer, quem faz, prioridade), COMBINADOS (decisões), IN
     const data = await response.json();
     let content = data.content?.[0]?.text || '';
 
-    // Remove markdown
+    // Limpa conteúdo
     content = content.replace(/```json/g, '').replace(/```/g, '').trim();
 
     // Extrai JSON
@@ -69,25 +59,40 @@ JSON com TAREFAS (o que fazer, quem faz, prioridade), COMBINADOS (decisões), IN
     const endIdx = content.lastIndexOf('}');
 
     if (startIdx === -1 || endIdx === -1) {
-      return res.status(500).json({ error: 'JSON não encontrado' });
+      console.error('Sem JSON:', content);
+      return res.status(500).json({ error: 'Sem JSON na resposta' });
     }
 
-    const jsonStr = content.substring(startIdx, endIdx + 1);
-    const parsed = JSON.parse(jsonStr);
+    let jsonStr = content.substring(startIdx, endIdx + 1);
+    
+    // Tenta parsear
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (e) {
+      console.error('JSON error:', e, 'String:', jsonStr.substring(0, 200));
+      // Tenta limpar caracteres problemáticos
+      jsonStr = jsonStr.replace(/\n/g, ' ').replace(/\r/g, '');
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (e2) {
+        return res.status(500).json({ error: 'JSON inválido' });
+      }
+    }
 
     const result = {
-      resumo: String(parsed.resumo || 'Reunião'),
-      tarefas: (Array.isArray(parsed.tarefas) ? parsed.tarefas : []).filter((t: any) => t.descricao),
-      combinados: (Array.isArray(parsed.combinados) ? parsed.combinados : []).filter((c: any) => c.descricao),
-      insights: (Array.isArray(parsed.insights) ? parsed.insights : []).filter((i: any) => i.descricao),
-      dataReuniao: String(parsed.dataReuniao || '01/01/2026'),
-      horaReuniao: String(parsed.horaReuniao || '10:00'),
+      resumo: parsed.resumo || 'Resumo não extraído',
+      tarefas: Array.isArray(parsed.tarefas) ? parsed.tarefas : [],
+      combinados: Array.isArray(parsed.combinados) ? parsed.combinados : [],
+      insights: Array.isArray(parsed.insights) ? parsed.insights : [],
+      dataReuniao: parsed.dataReuniao || '01/01/2026',
+      horaReuniao: parsed.horaReuniao || '10:00',
     };
 
     res.status(200).json(result);
 
   } catch (error) {
     console.error('Erro:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Erro' });
+    res.status(500).json({ error: 'Erro ao processar' });
   }
 }
