@@ -43,6 +43,16 @@ export default function TaskAutomationSystem() {
     }
   }, [tasks]);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (editingPrioridade && !e.target.closest('[data-prioridade-dropdown]')) {
+        setEditingPrioridade(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [editingPrioridade]);
+
   const processTranscription = async () => {
     if (!transcription.trim()) {
       alert('Cole a transcrição antes de processar');
@@ -268,10 +278,7 @@ export default function TaskAutomationSystem() {
     return (
       <div className="space-y-6">
         <div className="p-4 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold flex items-center gap-2" style={{ color: '#1A3A52' }}>
-              <Filter size={18} /> Filtros
-            </h3>
+          <div className="flex justify-end mb-4">
             <button
               onClick={generatePDF}
               className="px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 transition"
@@ -411,18 +418,29 @@ export default function TaskAutomationSystem() {
                       <p className="text-xs mt-1" style={{ color: '#888888' }}>Data: {task.dataReuniao} às {task.horaReuniao}</p>
                       <div className="mt-2 flex gap-2 flex-wrap">
                         {editingPrioridade === task.id ? (
-                          <select
-                            value={task.prioridade}
-                            onChange={(e) => updatePrioridade(task.id, e.target.value)}
-                            onBlur={() => setEditingPrioridade(null)}
-                            autoFocus
-                            className="px-2 py-1 rounded text-xs font-medium"
-                            style={{ border: '1px solid #FF9500', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
-                          >
-                            <option>Alta</option>
-                            <option>Média</option>
-                            <option>Baixa</option>
-                          </select>
+                          <div className="relative inline-block" data-prioridade-dropdown>
+                            <div className="absolute top-0 left-0 bg-white border border-gray-300 rounded shadow-lg z-10">
+                              {['Alta', 'Média', 'Baixa'].map(p => (
+                                <div
+                                  key={p}
+                                  onClick={() => updatePrioridade(task.id, p)}
+                                  className="px-4 py-2 cursor-pointer hover:bg-gray-100 text-sm"
+                                  style={{ color: p === 'Alta' ? '#E63946' : p === 'Média' ? '#FF9500' : '#1A3A52' }}
+                                >
+                                  {p}
+                                </div>
+                              ))}
+                            </div>
+                            <span 
+                              className="px-3 py-1 rounded text-xs font-medium cursor-pointer"
+                              style={{
+                                backgroundColor: task.prioridade === 'Alta' ? '#FFE6E6' : task.prioridade === 'Média' ? '#FFF9F0' : '#F0F8FF',
+                                color: task.prioridade === 'Alta' ? '#E63946' : task.prioridade === 'Média' ? '#FF9500' : '#1A3A52'
+                              }}
+                            >
+                              {task.prioridade}
+                            </span>
+                          </div>
                         ) : (
                           <span 
                             onClick={() => setEditingPrioridade(task.id)}
@@ -436,12 +454,14 @@ export default function TaskAutomationSystem() {
                             {task.prioridade}
                           </span>
                         )}
-                        <span className="px-3 py-1 rounded text-xs font-medium" style={{
-                          backgroundColor: task.status === 'Concluído' ? '#F0FFF4' : task.status === 'Em Progresso' ? '#FFF9F0' : '#F5F5F5',
-                          color: task.status === 'Concluído' ? '#2ECC71' : task.status === 'Em Progresso' ? '#FF9500' : '#888888'
-                        }}>
-                          {task.status}
-                        </span>
+                        {task.status !== 'Não Iniciado' && (
+                          <span className="px-3 py-1 rounded text-xs font-medium" style={{
+                            backgroundColor: task.status === 'Concluído' ? '#F0FFF4' : task.status === 'Em Progresso' ? '#FFF9F0' : '#F5F5F5',
+                            color: task.status === 'Concluído' ? '#2ECC71' : task.status === 'Em Progresso' ? '#FF9500' : '#888888'
+                          }}>
+                            {task.status}
+                          </span>
+                        )}
                         {isAtrasada && (
                           <span className="px-3 py-1 rounded text-xs font-medium" style={{
                             backgroundColor: '#FFE6E6',
