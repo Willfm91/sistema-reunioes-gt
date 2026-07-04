@@ -219,7 +219,195 @@ export default function TaskAutomationSystem() {
     return [...new Set(responsaveis)].filter(Boolean);
   };
 
-  const clearAllData = () => {
+  const generatePDFCombinados = (combinadosFiltrados) => {
+    if (combinadosFiltrados.length === 0) {
+      alert('Nenhum combinado para exportar com os filtros selecionados!');
+      return;
+    }
+
+    // Agrupar por responsável
+    const combinadosPorResponsavel = {};
+    combinadosFiltrados.forEach(combinado => {
+      const responsavel = combinado.responsavel || 'Sem responsável';
+      if (!combinadosPorResponsavel[responsavel]) {
+        combinadosPorResponsavel[responsavel] = [];
+      }
+      combinadosPorResponsavel[responsavel].push(combinado);
+    });
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginLeft = 15;
+    const marginRight = 15;
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    let yPosition = 20;
+    let contador = 1;
+
+    // Título
+    doc.setFontSize(18);
+    doc.setTextColor(26, 58, 82);
+    doc.setFont(undefined, 'bold');
+    doc.text('Combinados da Reunião', marginLeft, yPosition);
+    yPosition += 10;
+
+    // Data
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, marginLeft, yPosition);
+    yPosition += 8;
+
+    // Linha separadora
+    doc.setDrawColor(200, 200, 200);
+    doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
+    yPosition += 8;
+
+    // Por cada responsável
+    Object.keys(combinadosPorResponsavel).forEach((responsavel, indexResp) => {
+      const combinadosResponsavel = combinadosPorResponsavel[responsavel];
+
+      if (indexResp > 0 && yPosition > pageHeight - 60) {
+        doc.addPage();
+        yPosition = 15;
+      }
+
+      doc.setFontSize(12);
+      doc.setTextColor(26, 58, 82);
+      doc.setFont(undefined, 'bold');
+      doc.text(responsavel, marginLeft, yPosition);
+      yPosition += 6;
+
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Data: ${combinadosResponsavel[0].dataReuniao}`, marginLeft, yPosition);
+      yPosition += 6;
+
+      doc.setDrawColor(220, 220, 220);
+      doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
+      yPosition += 6;
+
+      combinadosResponsavel.forEach((combinado) => {
+        if (yPosition > pageHeight - 25) {
+          doc.addPage();
+          yPosition = 15;
+        }
+
+        doc.setFontSize(9);
+        doc.setTextColor(26, 58, 82);
+        doc.setFont(undefined, 'normal');
+        const descricaoText = `${contador}. ${combinado.descricao}`;
+        const descricaoLines = doc.splitTextToSize(descricaoText, contentWidth - 5);
+        doc.text(descricaoLines, marginLeft + 5, yPosition);
+        yPosition += descricaoLines.length * 4 + 3;
+        contador++;
+      });
+
+      yPosition += 4;
+    });
+
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text('TaskFlow by Willian Marins - Sistema de Gerenciamento de Atividades', marginLeft, pageHeight - 8);
+
+    doc.save(`TaskFlow_Combinados_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const generatePDFInsights = (insightsFiltrados) => {
+    if (insightsFiltrados.length === 0) {
+      alert('Nenhum insight para exportar com os filtros selecionados!');
+      return;
+    }
+
+    // Agrupar por responsável
+    const insightsPorResponsavel = {};
+    insightsFiltrados.forEach(insight => {
+      const responsavel = insight.responsavel || 'Sem responsável';
+      if (!insightsPorResponsavel[responsavel]) {
+        insightsPorResponsavel[responsavel] = [];
+      }
+      insightsPorResponsavel[responsavel].push(insight);
+    });
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginLeft = 15;
+    const marginRight = 15;
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    let yPosition = 20;
+    let contador = 1;
+
+    // Título
+    doc.setFontSize(18);
+    doc.setTextColor(26, 58, 82);
+    doc.setFont(undefined, 'bold');
+    doc.text('Insights da Reunião', marginLeft, yPosition);
+    yPosition += 10;
+
+    // Data
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, marginLeft, yPosition);
+    yPosition += 8;
+
+    // Linha separadora
+    doc.setDrawColor(200, 200, 200);
+    doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
+    yPosition += 8;
+
+    // Por cada responsável
+    Object.keys(insightsPorResponsavel).forEach((responsavel, indexResp) => {
+      const insightsResponsavel = insightsPorResponsavel[responsavel];
+
+      if (indexResp > 0 && yPosition > pageHeight - 60) {
+        doc.addPage();
+        yPosition = 15;
+      }
+
+      doc.setFontSize(12);
+      doc.setTextColor(26, 58, 82);
+      doc.setFont(undefined, 'bold');
+      doc.text(responsavel, marginLeft, yPosition);
+      yPosition += 6;
+
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Data: ${insightsResponsavel[0].dataReuniao}`, marginLeft, yPosition);
+      yPosition += 6;
+
+      doc.setDrawColor(220, 220, 220);
+      doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
+      yPosition += 6;
+
+      insightsResponsavel.forEach((insight) => {
+        if (yPosition > pageHeight - 25) {
+          doc.addPage();
+          yPosition = 15;
+        }
+
+        doc.setFontSize(9);
+        doc.setTextColor(26, 58, 82);
+        doc.setFont(undefined, 'normal');
+        const descricaoText = `${contador}. ${insight.descricao}`;
+        const descricaoLines = doc.splitTextToSize(descricaoText, contentWidth - 5);
+        doc.text(descricaoLines, marginLeft + 5, yPosition);
+        yPosition += descricaoLines.length * 4 + 3;
+        contador++;
+      });
+
+      yPosition += 4;
+    });
+
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text('TaskFlow by Willian Marins - Sistema de Gerenciamento de Atividades', marginLeft, pageHeight - 8);
+
+    doc.save(`TaskFlow_Insights_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
     if (confirm('Tem certeza que quer deletar TODAS as atividades, combinados e insights? Esta ação não pode ser desfeita!')) {
       setTasks([]);
       setCombinados([]);
@@ -655,6 +843,9 @@ export default function TaskAutomationSystem() {
   };
 
   const Combinados = () => {
+    const [filterPessoaCombinado, setFilterPessoaCombinado] = useState('');
+    const [filterDataCombinado, setFilterDataCombinado] = useState('');
+
     const addCombinado = () => {
       const descricao = prompt('Descreva o combinado:');
       const responsavel = prompt('De quem é? (nome):');
@@ -680,27 +871,79 @@ export default function TaskAutomationSystem() {
       }
     };
 
+    const combinadosFiltrados = combinados.filter(c => {
+      if (filterPessoaCombinado && c.responsavel !== filterPessoaCombinado) return false;
+      if (filterDataCombinado && c.dataReuniao !== filterDataCombinado) return false;
+      return true;
+    });
+
+    const pessoasUnicasCombinado = [...new Set(combinados.map(c => c.responsavel))].filter(Boolean);
+    const datasUnicasCombinado = [...new Set(combinados.map(c => c.dataReuniao))].filter(Boolean);
+
     return (
       <div className="space-y-6">
-        <div className="flex justify-end">
-          <button
-            onClick={addCombinado}
-            className="px-4 py-2 rounded text-sm font-semibold text-white transition"
-            style={{ backgroundColor: '#FF9500' }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
-          >
-            + Adicionar Combinado
-          </button>
+        <div className="p-4 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
+          <div className="flex justify-between items-end gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Pessoa:</label>
+                <select
+                  value={filterPessoaCombinado}
+                  onChange={(e) => setFilterPessoaCombinado(e.target.value)}
+                  className="w-full px-3 py-2 rounded text-sm"
+                  style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+                >
+                  <option value="">Todos</option>
+                  {pessoasUnicasCombinado.map(pessoa => (
+                    <option key={pessoa} value={pessoa}>{pessoa}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Data da Reunião:</label>
+                <select
+                  value={filterDataCombinado}
+                  onChange={(e) => setFilterDataCombinado(e.target.value)}
+                  className="w-full px-3 py-2 rounded text-sm"
+                  style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+                >
+                  <option value="">Todas</option>
+                  {datasUnicasCombinado.map(data => (
+                    <option key={data} value={data}>{data}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={addCombinado}
+                className="px-4 py-2 rounded text-sm font-semibold text-white transition"
+                style={{ backgroundColor: '#FF9500' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
+              >
+                + Adicionar
+              </button>
+              <button
+                onClick={() => generatePDFCombinados(combinadosFiltrados)}
+                className="px-4 py-2 rounded text-sm font-semibold text-white transition"
+                style={{ backgroundColor: '#1A3A52' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#0F1A29'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#1A3A52'}
+              >
+                Exportar PDF
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-3">
-          {combinados.length === 0 ? (
+          {combinadosFiltrados.length === 0 ? (
             <div className="text-center py-12 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
               <p style={{ color: '#888888' }}>Nenhum combinado registrado ainda.</p>
             </div>
           ) : (
-            combinados.map(combinado => (
+            combinadosFiltrados.map(combinado => (
               <div key={combinado.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
@@ -730,6 +973,9 @@ export default function TaskAutomationSystem() {
   };
 
   const Insights = () => {
+    const [filterPessoaInsight, setFilterPessoaInsight] = useState('');
+    const [filterDataInsight, setFilterDataInsight] = useState('');
+
     const addInsight = () => {
       const descricao = prompt('Descreva o insight (ex: Hooks dos videos são fracos, dificuldade em chamar atenção):');
       const responsavel = prompt('De quem é? (nome):');
@@ -755,27 +1001,79 @@ export default function TaskAutomationSystem() {
       }
     };
 
+    const insightsFiltrados = insights.filter(i => {
+      if (filterPessoaInsight && i.responsavel !== filterPessoaInsight) return false;
+      if (filterDataInsight && i.dataReuniao !== filterDataInsight) return false;
+      return true;
+    });
+
+    const pessoasUnicasInsight = [...new Set(insights.map(i => i.responsavel))].filter(Boolean);
+    const datasUnicasInsight = [...new Set(insights.map(i => i.dataReuniao))].filter(Boolean);
+
     return (
       <div className="space-y-6">
-        <div className="flex justify-end">
-          <button
-            onClick={addInsight}
-            className="px-4 py-2 rounded text-sm font-semibold text-white transition"
-            style={{ backgroundColor: '#FF9500' }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
-          >
-            + Adicionar Insight
-          </button>
+        <div className="p-4 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
+          <div className="flex justify-between items-end gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Pessoa:</label>
+                <select
+                  value={filterPessoaInsight}
+                  onChange={(e) => setFilterPessoaInsight(e.target.value)}
+                  className="w-full px-3 py-2 rounded text-sm"
+                  style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+                >
+                  <option value="">Todos</option>
+                  {pessoasUnicasInsight.map(pessoa => (
+                    <option key={pessoa} value={pessoa}>{pessoa}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Data da Reunião:</label>
+                <select
+                  value={filterDataInsight}
+                  onChange={(e) => setFilterDataInsight(e.target.value)}
+                  className="w-full px-3 py-2 rounded text-sm"
+                  style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+                >
+                  <option value="">Todas</option>
+                  {datasUnicasInsight.map(data => (
+                    <option key={data} value={data}>{data}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={addInsight}
+                className="px-4 py-2 rounded text-sm font-semibold text-white transition"
+                style={{ backgroundColor: '#FF9500' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
+              >
+                + Adicionar
+              </button>
+              <button
+                onClick={() => generatePDFInsights(insightsFiltrados)}
+                className="px-4 py-2 rounded text-sm font-semibold text-white transition"
+                style={{ backgroundColor: '#1A3A52' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#0F1A29'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#1A3A52'}
+              >
+                Exportar PDF
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-3">
-          {insights.length === 0 ? (
+          {insightsFiltrados.length === 0 ? (
             <div className="text-center py-12 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
               <p style={{ color: '#888888' }}>Nenhum insight registrado ainda.</p>
             </div>
           ) : (
-            insights.map(insight => (
+            insightsFiltrados.map(insight => (
               <div key={insight.id} className="bg-white rounded-lg p-4" style={{ border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(26, 58, 82, 0.08)' }}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
