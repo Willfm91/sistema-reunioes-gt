@@ -160,11 +160,9 @@ export default function TaskAutomationSystem() {
     return [...new Set(responsaveis)].filter(Boolean);
   };
 
-  const generatePDF = () => {
-    const tarefasAbertas = tasks.filter(t => t.status !== 'Concluído');
-    
-    if (tarefasAbertas.length === 0) {
-      alert('Nenhuma tarefa em aberto para exportar!');
+  const generatePDFWithTasks = (tarefasParaExportar) => {
+    if (tarefasParaExportar.length === 0) {
+      alert('Nenhuma tarefa para exportar com os filtros selecionados!');
       return;
     }
 
@@ -191,7 +189,7 @@ export default function TaskAutomationSystem() {
     yPosition += 8;
 
     // Tarefas
-    tarefasAbertas.forEach((task, index) => {
+    tarefasParaExportar.forEach((task, index) => {
       // Verificar se precisa de nova página
       if (yPosition > pageHeight - 40) {
         doc.addPage();
@@ -215,9 +213,6 @@ export default function TaskAutomationSystem() {
       yPosition += 5;
       doc.text(`Deadline: ${task.deadline || 'Não definido'}`, 25, yPosition);
       yPosition += 5;
-
-      // Resumo (se houver)
-      // REMOVIDO: Não incluir resumo no PDF
 
       // Espaço entre tarefas
       yPosition += 5;
@@ -278,21 +273,6 @@ export default function TaskAutomationSystem() {
     return (
       <div className="space-y-6">
         <div className="p-4 rounded-lg" style={{ backgroundColor: '#F9F9F9', border: '1px solid #E0E0E0' }}>
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={generatePDF}
-              className="px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 transition"
-              style={{ 
-                backgroundColor: '#FF9500',
-                color: '#FFFFFF'
-              }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
-            >
-              <Download size={16} /> Exportar PDF
-            </button>
-          </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Status:</label>
@@ -355,6 +335,21 @@ export default function TaskAutomationSystem() {
               />
             </div>
           </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={() => generatePDFWithTasks(tarefasFiltradas)}
+            className="px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 transition"
+            style={{ 
+              backgroundColor: '#FF9500',
+              color: '#FFFFFF'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#E68A00'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9500'}
+          >
+            <Download size={16} /> Exportar PDF
+          </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
