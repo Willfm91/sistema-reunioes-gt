@@ -18,6 +18,7 @@ export default function TaskAutomationSystem() {
   const [filterDataInicio, setFilterDataInicio] = useState('');
   const [filterDataFim, setFilterDataFim] = useState('');
   const [filterStatus, setFilterStatus] = useState('aberto');
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [formData, setFormData] = useState({
     taskId: null,
     deadline: '',
@@ -136,7 +137,12 @@ export default function TaskAutomationSystem() {
   };
 
   const deleteTask = (taskId) => {
+    setDeleteConfirm(taskId);
+  };
+
+  const confirmDelete = (taskId) => {
     setTasks(tasks.filter(t => t.id !== taskId));
+    setDeleteConfirm(null);
   };
 
   const getResponsaveisUnicos = () => {
@@ -201,13 +207,7 @@ export default function TaskAutomationSystem() {
       yPosition += 5;
 
       // Resumo (se houver)
-      if (task.resumo) {
-        doc.setFontSize(8);
-        doc.setTextColor(120, 120, 120);
-        const resumoLines = doc.splitTextToSize(`Resumo: ${task.resumo}`, pageWidth - 50);
-        doc.text(resumoLines, 25, yPosition);
-        yPosition += resumoLines.length * 4 + 2;
-      }
+      // REMOVIDO: Não incluir resumo no PDF
 
       // Espaço entre tarefas
       yPosition += 5;
@@ -286,31 +286,19 @@ export default function TaskAutomationSystem() {
             </button>
           </div>
           
-          {/* Filtro de Status */}
-          <div className="mb-4 flex gap-2">
-            <button
-              onClick={() => setFilterStatus('aberto')}
-              className="px-4 py-2 rounded font-semibold text-sm transition"
-              style={{
-                backgroundColor: filterStatus === 'aberto' ? '#FF9500' : '#E0E0E0',
-                color: filterStatus === 'aberto' ? '#FFFFFF' : '#555555'
-              }}
-            >
-              Em Aberto
-            </button>
-            <button
-              onClick={() => setFilterStatus('concluidas')}
-              className="px-4 py-2 rounded font-semibold text-sm transition"
-              style={{
-                backgroundColor: filterStatus === 'concluidas' ? '#2ECC71' : '#E0E0E0',
-                color: filterStatus === 'concluidas' ? '#FFFFFF' : '#555555'
-              }}
-            >
-              Concluídas
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Status:</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-3 py-2 rounded text-sm"
+                style={{ border: '1px solid #CCCCCC', backgroundColor: '#FFFFFF', color: '#1A3A52' }}
+              >
+                <option value="aberto">Em Aberto</option>
+                <option value="concluidas">Concluídas</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: '#555555' }}>Por Responsável:</label>
               <select
@@ -645,6 +633,36 @@ export default function TaskAutomationSystem() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Confirmação de Delete */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm" style={{ boxShadow: '0 10px 40px rgba(26, 58, 82, 0.2)' }}>
+            <h3 className="text-lg font-bold mb-3" style={{ color: '#1A3A52' }}>Confirmar Exclusão</h3>
+            <p className="mb-6" style={{ color: '#555555' }}>Tem certeza que deseja deletar esta tarefa? Esta ação não pode ser desfeita.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => confirmDelete(deleteConfirm)}
+                className="flex-1 text-white py-2 rounded-lg font-semibold transition"
+                style={{ backgroundColor: '#E63946' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#C92A33'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#E63946'}
+              >
+                Confirmar Deletar
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2 rounded-lg font-semibold transition"
+                style={{ backgroundColor: '#E0E0E0', color: '#555555' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#D0D0D0'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#E0E0E0'}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
