@@ -30,24 +30,35 @@ export default async function handler(
 
     console.log('✅ API Key encontrada:', apiKey.substring(0, 20) + '...');
 
-    const systemPrompt = `Você é um especialista em análise de transcrições de reuniões.
+    const systemPrompt = `Você é um assistente que extrai informações de transcrições de reuniões.
 
-EXTRAIA com PRECISÃO:
+TAREFA: Extraia tarefas, combinados e insights de uma transcrição.
 
-1. RESUMO (2-3 linhas)
-2. TAREFAS (ações que precisam ser feitas)
-3. COMBINADOS (Alinhamentos, decisões, acordos)
-4. INSIGHTS (Dificuldades, problemas, oportunidades)
+DEFINIÇÕES:
+- TAREFAS: ações específicas com responsável e prioridade
+- COMBINADOS: decisões e alinhamentos que foram acordados
+- INSIGHTS: problemas ou oportunidades identificadas
 
-Retorne APENAS JSON válido, sem markdown:
+RETORNE APENAS este JSON, sem markdown, sem explicações, sem \`\`\`json\`\`\`:
+
 {
-  "resumo": "...",
-  "tarefas": [{"descricao": "...", "responsavel": "...", "prioridade": "Alta|Média|Baixa"}],
-  "combinados": [{"descricao": "...", "responsavel": "..."}],
-  "insights": [{"descricao": "...", "responsavel": "..."}],
+  "resumo": "texto do resumo em 2-3 linhas",
+  "tarefas": [
+    {"descricao": "texto da tarefa", "responsavel": "nome", "prioridade": "Alta"}
+  ],
+  "combinados": [
+    {"descricao": "texto do combinado", "responsavel": "nome"}
+  ],
+  "insights": [
+    {"descricao": "texto do insight", "responsavel": "nome"}
+  ],
   "dataReuniao": "DD/MM/YYYY",
   "horaReuniao": "HH:MM"
-}`;
+}
+
+NÃO ADICIONE NADA ANTES OU DEPOIS DO JSON.
+NÃO USE \`\`\`json\`\`\` OU MARKDOWN.
+RETORNE APENAS O JSON VÁLIDO.`;
 
     console.log('🔄 Enviando para Claude API...');
 
@@ -93,14 +104,32 @@ Retorne APENAS JSON válido, sem markdown:
 
     console.log('📄 Conteúdo extraído:', content.substring(0, 300));
 
-    // Procura JSON
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error('❌ JSON não encontrado em:', content);
-      return res.status(500).json({ error: 'Resposta não contém JSON válido' });
+    // Procura JSON - tenta várias estratégias
+    let jsonStr = null;
+    
+    // Estratégia 1: JSON entre ``` ```
+    const jsonMarkdown = content.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonMarkdown) {
+      jsonStr = jsonMarkdown[1];
+      console.log('✅ JSON encontrado em markdown');
+    }
+    
+    // Estratégia 2: JSON bruto entre {}
+    if (!jsonStr) {
+      const jsonRaw = content.match(/\{[\s\S]*\}/);
+      if (jsonRaw) {
+        jsonStr = jsonRaw[0];
+        console.log('✅ JSON encontrado bruto');
+      }
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    if (!jsonStr) {
+      console.error('❌ JSON não encontrado. Resposta completa:', content);
+      return res.status(500).json({ error: `Resposta inválida: ${content.substring(0, 200)}` });
+    }
+
+    console.log('🔍 Tentando parsear:', jsonStr.substring(0, 100));
+    const parsed = JSON.parse(jsonStr);
     console.log('✅ JSON parseado com sucesso');
 
     // Validação e defaults
