@@ -119,18 +119,31 @@ export default function Home() {
 
     setProcessing(true);
     try {
+      console.log('📤 Enviando transcrição para API...');
       const response = await fetch('/api/process-transcription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transcription })
       });
 
-      if (!response.ok) throw new Error(`Erro: ${response.statusText}`);
+      console.log('📥 Resposta recebida:', response.status);
       const result = await response.json();
-      console.log('Resultado da API:', result);
+      
+      if (!response.ok) {
+        console.error('❌ Erro na resposta:', result);
+        throw new Error(result.error || `Erro ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('✅ Sucesso! Dados:', {
+        tarefas: result.tarefas?.length || 0,
+        combinados: result.combinados?.length || 0,
+        insights: result.insights?.length || 0
+      });
       setProcessedData(result);
     } catch (error) {
-      alert(`Erro ao processar: ${error.message}`);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error('❌ Erro ao processar:', errorMsg);
+      alert(`Erro ao processar: ${errorMsg}`);
     }
     setProcessing(false);
   };
