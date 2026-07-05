@@ -289,13 +289,13 @@ export default function Home() {
   function renderProcessar() {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-bold text-navy mb-4">Cole a Transcrição</h2>
+        <div className="bg-panel border border-edge rounded-lg p-6">
+          <h2 className="text-lg font-bold text-ink mb-4">Cole a Transcrição</h2>
           <textarea
             value={transcription}
             onChange={(e) => setTranscription(e.target.value)}
             placeholder="Cole aqui a transcrição da reunião..."
-            className="w-full h-64 border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange"
+            className="w-full h-64 bg-canvas border border-edge text-ink placeholder:text-muted rounded-md p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange"
           />
           <button
             onClick={handleProcessar}
@@ -307,33 +307,33 @@ export default function Home() {
         </div>
 
         {previewData && (
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange">
-            <h2 className="text-lg font-bold text-navy mb-2">Prévia do Processamento</h2>
-            <p className="text-sm text-gray-700 mb-4">{previewData.resumo}</p>
+          <div className="bg-panel border border-edge rounded-lg p-6 border-l-4 border-l-orange">
+            <h2 className="text-lg font-bold text-ink mb-2">Prévia do Processamento</h2>
+            <p className="text-sm text-ink mb-4">{previewData.resumo}</p>
 
-            <h3 className="font-semibold text-navy mb-2">
+            <h3 className="font-semibold text-ink mb-2">
               Atividades ({previewData.tarefas.length})
             </h3>
             {previewData.tarefas.length > 0 ? (
-              <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1 mb-4">
+              <ol className="list-decimal list-inside text-sm text-ink space-y-1 mb-4">
                 {previewData.tarefas.map((t, i) => (
                   <li key={i}>
                     {t.descricao} —{' '}
-                    <span className="text-gray-500">
+                    <span className="text-muted">
                       {t.responsavel} ({t.prioridade})
                     </span>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className="text-sm text-gray-400 mb-4">Nenhuma tarefa encontrada</p>
+              <p className="text-sm text-muted mb-4">Nenhuma tarefa encontrada</p>
             )}
 
             <div className="flex gap-3 text-sm mb-4">
-              <span className="px-3 py-1 bg-skyblue/10 text-skyblue rounded-full font-medium">
+              <span className="px-3 py-1 bg-skyblue/15 text-skyblue rounded-full font-medium">
                 Combinados ({previewData.combinados.length})
               </span>
-              <span className="px-3 py-1 bg-green/10 text-green rounded-full font-medium">
+              <span className="px-3 py-1 bg-green/15 text-green rounded-full font-medium">
                 Insights ({previewData.insights.length})
               </span>
             </div>
@@ -690,13 +690,13 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-navy text-white px-6 py-4 shadow">
+    <div className="min-h-screen bg-canvas">
+      <header className="bg-panel border-b border-edge text-ink px-6 py-4">
         <h1 className="text-xl font-bold">
           Post-Meeting Progress <span className="text-orange">by Willian</span>
         </h1>
       </header>
-      <nav className="bg-white border-b border-gray-200 px-6 flex gap-1 overflow-x-auto">
+      <nav className="bg-panel border-b border-edge px-6 flex gap-1 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -704,7 +704,7 @@ export default function Home() {
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.id
                 ? 'border-orange text-orange'
-                : 'border-transparent text-navy/60 hover:text-navy'
+                : 'border-transparent text-muted hover:text-ink'
             }`}
           >
             {tab.label}
