@@ -374,44 +374,56 @@ export default function Home() {
           />
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-center">
-          <input
-            type="text"
-            placeholder="Buscar tarefa..."
-            value={filters.search}
-            onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm flex-1 min-w-[180px]"
-          />
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-          >
-            <option>Todos</option>
-            <option>Em Progresso</option>
-            <option>Atrasada</option>
-            <option>Concluído</option>
-          </select>
-          <select
-            value={filters.responsavel}
-            onChange={(e) => setFilters((f) => ({ ...f, responsavel: e.target.value }))}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-          >
-            <option>Todos</option>
-            {responsaveis.map((r) => (
-              <option key={r}>{r}</option>
-            ))}
-          </select>
-          <select
-            value={filters.prioridade}
-            onChange={(e) => setFilters((f) => ({ ...f, prioridade: e.target.value }))}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-          >
-            <option>Todos</option>
-            {PRIORITIES.map((p) => (
-              <option key={p}>{p}</option>
-            ))}
-          </select>
+        <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-end">
+          <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+            <label className="text-xs text-gray-500 font-medium">Buscar</label>
+            <input
+              type="text"
+              placeholder="Buscar tarefa..."
+              value={filters.search}
+              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 font-medium">Status</label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option>Todos</option>
+              <option>Em Progresso</option>
+              <option>Atrasada</option>
+              <option>Concluído</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 font-medium">Responsável</label>
+            <select
+              value={filters.responsavel}
+              onChange={(e) => setFilters((f) => ({ ...f, responsavel: e.target.value }))}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option>Todos</option>
+              {responsaveis.map((r) => (
+                <option key={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 font-medium">Prioridade</label>
+            <select
+              value={filters.prioridade}
+              onChange={(e) => setFilters((f) => ({ ...f, prioridade: e.target.value }))}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option>Todos</option>
+              {PRIORITIES.map((p) => (
+                <option key={p}>{p}</option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={() => setShowCreateModal(true)}
             className="ml-auto flex items-center gap-1 bg-navy text-white px-4 py-2 rounded-md text-sm font-semibold hover:opacity-90"
