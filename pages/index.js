@@ -28,15 +28,15 @@ function loadFromStorage(key, fallback) {
 }
 
 function priorityBadgeClass(p) {
-  if (p === 'Alta') return 'bg-red/10 text-red';
-  if (p === 'Baixa') return 'bg-green/10 text-green';
-  return 'bg-orange/10 text-orange';
+  if (p === 'Alta') return 'bg-red/15 text-red';
+  if (p === 'Baixa') return 'bg-green/15 text-green';
+  return 'bg-orange/15 text-orange';
 }
 
 function statusBadgeClass(status) {
-  if (status === 'Concluído') return 'bg-green/10 text-green';
-  if (status === 'Atrasada') return 'bg-red/10 text-red';
-  return 'bg-skyblue/10 text-skyblue';
+  if (status === 'Concluído') return 'bg-green/15 text-green';
+  if (status === 'Atrasada') return 'bg-red/15 text-red';
+  return 'bg-skyblue/15 text-skyblue';
 }
 
 function formatDays(value) {
@@ -46,8 +46,8 @@ function formatDays(value) {
 
 function KpiCard({ label, value, colorClass }) {
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <p className="text-xs text-gray-500 font-medium">{label}</p>
+    <div className="bg-panel border border-edge rounded-lg p-4">
+      <p className="text-xs text-muted font-medium">{label}</p>
       <p className={`text-2xl font-bold ${colorClass}`}>{value}</p>
     </div>
   );
@@ -370,27 +370,27 @@ export default function Home() {
           <KpiCard
             label="Média de atraso (histórico)"
             value={formatDays(kpis.mediaAtrasoHistorico)}
-            colorClass="text-navy"
+            colorClass="text-muted"
           />
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-end">
+        <div className="bg-panel border border-edge rounded-lg p-4 flex flex-wrap gap-3 items-end">
           <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
-            <label className="text-xs text-gray-500 font-medium">Buscar</label>
+            <label className="text-xs text-muted font-medium">Buscar</label>
             <input
               type="text"
               placeholder="Buscar tarefa..."
               value={filters.search}
               onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="bg-canvas border border-edge text-ink placeholder:text-muted rounded-md px-3 py-2 text-sm"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 font-medium">Status</label>
+            <label className="text-xs text-muted font-medium">Status</label>
             <select
               value={filters.status}
               onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="bg-canvas border border-edge text-ink rounded-md px-3 py-2 text-sm"
             >
               <option>Todos</option>
               <option>Em Progresso</option>
@@ -399,11 +399,11 @@ export default function Home() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 font-medium">Responsável</label>
+            <label className="text-xs text-muted font-medium">Responsável</label>
             <select
               value={filters.responsavel}
               onChange={(e) => setFilters((f) => ({ ...f, responsavel: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="bg-canvas border border-edge text-ink rounded-md px-3 py-2 text-sm"
             >
               <option>Todos</option>
               {responsaveis.map((r) => (
@@ -412,11 +412,11 @@ export default function Home() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 font-medium">Prioridade</label>
+            <label className="text-xs text-muted font-medium">Prioridade</label>
             <select
               value={filters.prioridade}
               onChange={(e) => setFilters((f) => ({ ...f, prioridade: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="bg-canvas border border-edge text-ink rounded-md px-3 py-2 text-sm"
             >
               <option>Todos</option>
               {PRIORITIES.map((p) => (
@@ -426,7 +426,7 @@ export default function Home() {
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="ml-auto flex items-center gap-1 bg-navy text-white px-4 py-2 rounded-md text-sm font-semibold hover:opacity-90"
+            className="ml-auto flex items-center gap-1 bg-panel border border-edge text-ink px-4 py-2 rounded-md text-sm font-semibold hover:bg-white/5"
           >
             <Plus size={16} /> Criar Atividade
           </button>
@@ -438,10 +438,10 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <div className="bg-panel border border-edge rounded-lg overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-navy border-b border-gray-200">
+              <tr className="text-left text-ink border-b border-edge">
                 <th className="p-3">Descrição</th>
                 <th className="p-3">Responsável</th>
                 <th className="p-3">Prioridade</th>
@@ -453,8 +453,8 @@ export default function Home() {
             </thead>
             <tbody>
               {filteredTasks.map((t) => (
-                <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="p-3">{t.descricao}</td>
+                <tr key={t.id} className="border-b border-edge hover:bg-white/5">
+                  <td className="p-3 text-ink">{t.descricao}</td>
                   <td className="p-3">
                     {editingResponsavelId === t.id ? (
                       <input
@@ -463,7 +463,7 @@ export default function Home() {
                         onChange={(e) => setResponsavelDraft(e.target.value)}
                         onBlur={() => updateTaskResponsavel(t.id, responsavelDraft)}
                         onKeyDown={(e) => e.key === 'Enter' && updateTaskResponsavel(t.id, responsavelDraft)}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm w-32"
+                        className="bg-canvas border border-edge text-ink rounded px-2 py-1 text-sm w-32"
                       />
                     ) : (
                       <button
@@ -471,7 +471,7 @@ export default function Home() {
                           setEditingResponsavelId(t.id);
                           setResponsavelDraft(t.responsavel);
                         }}
-                        className="text-navy hover:underline"
+                        className="text-ink hover:underline"
                       >
                         {t.responsavel}
                       </button>
@@ -485,12 +485,12 @@ export default function Home() {
                       {t.prioridade}
                     </button>
                     {editingPriorityId === t.id && (
-                      <div className="absolute z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                      <div className="absolute z-10 mt-1 bg-panel border border-edge rounded-md shadow-lg">
                         {PRIORITIES.map((p) => (
                           <button
                             key={p}
                             onClick={() => updateTaskPriority(t.id, p)}
-                            className="block w-full text-left px-3 py-2 text-xs hover:bg-gray-50 whitespace-nowrap"
+                            className="block w-full text-left px-3 py-2 text-xs text-ink hover:bg-white/5 whitespace-nowrap"
                           >
                             {p}
                           </button>
@@ -512,7 +512,7 @@ export default function Home() {
                       type="date"
                       value={t.deadline || ''}
                       onChange={(e) => updateTaskDeadlineField(t.id, e.target.value)}
-                      className="border border-gray-300 rounded px-1 py-0.5 text-xs"
+                      className="bg-canvas border border-edge text-ink rounded px-1 py-0.5 text-xs"
                     />
                   </td>
                   <td className="p-3">
@@ -520,7 +520,7 @@ export default function Home() {
                       type="date"
                       value={t.dataEntregue || ''}
                       onChange={(e) => updateTaskDataEntregue(t.id, e.target.value)}
-                      className="border border-gray-300 rounded px-1 py-0.5 text-xs"
+                      className="bg-canvas border border-edge text-ink rounded px-1 py-0.5 text-xs"
                     />
                   </td>
                   <td className="p-3 text-right">
@@ -532,7 +532,7 @@ export default function Home() {
               ))}
               {filteredTasks.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-gray-400">
+                  <td colSpan={7} className="p-6 text-center text-muted">
                     Nenhuma tarefa encontrada
                   </td>
                 </tr>
