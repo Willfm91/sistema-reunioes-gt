@@ -546,15 +546,15 @@ export default function Home() {
 
   function renderCombinados() {
     return (
-      <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
+      <div className="bg-panel border border-edge rounded-lg divide-y divide-edge">
         {combinados.length === 0 && (
-          <p className="p-6 text-center text-gray-400">Nenhum combinado registrado</p>
+          <p className="p-6 text-center text-muted">Nenhum combinado registrado</p>
         )}
         {combinados.map((c) => (
           <div key={c.id} className="p-4 flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm text-navy font-medium">{c.descricao}</p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-sm text-ink font-medium">{c.descricao}</p>
+              <p className="text-xs text-muted mt-1">
                 {c.responsavel} · {c.dataReuniao} {c.horaReuniao}
               </p>
             </div>
@@ -569,15 +569,15 @@ export default function Home() {
 
   function renderInsights() {
     return (
-      <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
+      <div className="bg-panel border border-edge rounded-lg divide-y divide-edge">
         {insights.length === 0 && (
-          <p className="p-6 text-center text-gray-400">Nenhum insight registrado</p>
+          <p className="p-6 text-center text-muted">Nenhum insight registrado</p>
         )}
         {insights.map((i) => (
           <div key={i.id} className="p-4 flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm text-navy font-medium">{i.descricao}</p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-sm text-ink font-medium">{i.descricao}</p>
+              <p className="text-xs text-muted mt-1">
                 {i.responsavel} · {i.dataReuniao} {i.horaReuniao}
               </p>
             </div>
@@ -593,16 +593,16 @@ export default function Home() {
   function renderCreateModal() {
     return (
       <div
-        className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+        className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
         onClick={() => setShowCreateModal(false)}
       >
         <div
-          className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
+          className="bg-panel border border-edge rounded-lg shadow-xl p-6 w-full max-w-md"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-navy">Criar Atividade</h3>
-            <button onClick={() => setShowCreateModal(false)}>
+            <h3 className="font-bold text-ink">Criar Atividade</h3>
+            <button onClick={() => setShowCreateModal(false)} className="text-muted hover:text-ink">
               <X size={18} />
             </button>
           </div>
@@ -612,19 +612,19 @@ export default function Home() {
               placeholder="Descrição"
               value={newTask.descricao}
               onChange={(e) => setNewTask((n) => ({ ...n, descricao: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full bg-canvas border border-edge text-ink placeholder:text-muted rounded-md px-3 py-2 text-sm"
             />
             <input
               type="text"
               placeholder="Responsável"
               value={newTask.responsavel}
               onChange={(e) => setNewTask((n) => ({ ...n, responsavel: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full bg-canvas border border-edge text-ink placeholder:text-muted rounded-md px-3 py-2 text-sm"
             />
             <select
               value={newTask.prioridade}
               onChange={(e) => setNewTask((n) => ({ ...n, prioridade: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full bg-canvas border border-edge text-ink rounded-md px-3 py-2 text-sm"
             >
               {PRIORITIES.map((p) => (
                 <option key={p}>{p}</option>
@@ -634,13 +634,13 @@ export default function Home() {
               type="date"
               value={newTask.deadline}
               onChange={(e) => setNewTask((n) => ({ ...n, deadline: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full bg-canvas border border-edge text-ink rounded-md px-3 py-2 text-sm"
             />
           </div>
           <div className="flex justify-end gap-2 mt-5">
             <button
               onClick={() => setShowCreateModal(false)}
-              className="px-4 py-2 text-sm rounded-md text-gray-600 hover:bg-gray-100"
+              className="px-4 py-2 text-sm rounded-md text-muted hover:bg-white/5"
             >
               Cancelar
             </button>
@@ -659,21 +659,21 @@ export default function Home() {
   function renderDeleteModal() {
     return (
       <div
-        className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+        className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
         onClick={() => setDeleteConfirm(null)}
       >
         <div
-          className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm"
+          className="bg-panel border border-edge rounded-lg shadow-xl p-6 w-full max-w-sm"
           onClick={(e) => e.stopPropagation()}
         >
-          <h3 className="font-bold text-navy mb-2">Confirmar exclusão</h3>
-          <p className="text-sm text-gray-600 mb-5">
+          <h3 className="font-bold text-ink mb-2">Confirmar exclusão</h3>
+          <p className="text-sm text-muted mb-5">
             Esta ação não pode ser desfeita. Deseja continuar?
           </p>
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setDeleteConfirm(null)}
-              className="px-4 py-2 text-sm rounded-md text-gray-600 hover:bg-gray-100"
+              className="px-4 py-2 text-sm rounded-md text-muted hover:bg-white/5"
             >
               Cancelar
             </button>
