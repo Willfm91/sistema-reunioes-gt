@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Trash2, Plus, X, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { deriveStatus, migrateLegacyTask } from '../lib/taskStatus';
 
 const TABS = [
   { id: 'processar', label: 'Processar' },
@@ -29,6 +30,12 @@ function priorityBadgeClass(p) {
   if (p === 'Alta') return 'bg-red/10 text-red';
   if (p === 'Baixa') return 'bg-green/10 text-green';
   return 'bg-orange/10 text-orange';
+}
+
+function statusBadgeClass(status) {
+  if (status === 'Concluído') return 'bg-green/10 text-green';
+  if (status === 'Atrasada') return 'bg-red/10 text-red';
+  return 'bg-skyblue/10 text-skyblue';
 }
 
 function KpiCard({ label, value, colorClass }) {
@@ -67,11 +74,11 @@ export default function Home() {
     descricao: '',
     responsavel: '',
     prioridade: 'Média',
-    dataEntrega: '',
+    deadline: '',
   });
 
   useEffect(() => {
-    setTasks(loadFromStorage('tasks', []));
+    setTasks(loadFromStorage('tasks', []).map(migrateLegacyTask));
     setCombinados(loadFromStorage('combinados', []));
     setInsights(loadFromStorage('insights', []));
     setHydrated(true);
@@ -141,8 +148,8 @@ export default function Home() {
       descricao: t.descricao,
       responsavel: t.responsavel,
       prioridade: t.prioridade,
-      dataEntrega: '',
-      status: 'Em Progresso',
+      deadline: '',
+      dataEntregue: '',
       ...meta,
     }));
     const newCombinados = previewData.combinados.map((c) => ({ id: uid(), ...c, ...meta }));
@@ -157,12 +164,12 @@ export default function Home() {
     setActiveTab('tarefas');
   }
 
-  function updateTaskDeadline(id, date) {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, dataEntrega: date, status: date ? 'Concluído' : 'Em Progresso' } : t
-      )
-    );
+  function updateTaskDeadlineField(id, date) {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, deadline: date } : t)));
+  }
+
+  function updateTaskDataEntregue(id, date) {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, dataEntregue: date } : t)));
   }
 
   function updateTaskPriority(id, prioridade) {
@@ -201,20 +208,23 @@ export default function Home() {
       descricao: newTask.descricao.trim(),
       responsavel: newTask.responsavel.trim() || 'Não especificado',
       prioridade: newTask.prioridade,
-      dataEntrega: newTask.dataEntrega,
-      status: newTask.dataEntrega ? 'Concluído' : 'Em Progresso',
+      deadline: newTask.deadline,
+      dataEntregue: '',
       dataReuniao: now.toLocaleDateString('pt-BR'),
       horaReuniao: now.toTimeString().slice(0, 5),
     };
     setTasks((prev) => [...prev, task]);
-    setNewTask({ descricao: '', responsavel: '', prioridade: 'Média', dataEntrega: '' });
+    setNewTask({ descricao: '', responsavel: '', prioridade: 'Média', deadline: '' });
     setShowCreateModal(false);
   }
+
+  const today = new Date().toISOString().slice(0, 10);
 
   const responsaveis = Array.from(new Set(tasks.map((t) => t.responsavel))).filter(Boolean);
 
   const filteredTasks = tasks.filter((t) => {
-    if (filters.status !== 'Todos' && t.status !== filters.status) return false;
+    const status = deriveStatus(t, today);
+    if (filters.status !== 'Todos' && status !== filters.status) return false;
     if (filters.responsavel !== 'Todos' && t.responsavel !== filters.responsavel) return false;
     if (filters.prioridade !== 'Todos' && t.prioridade !== filters.prioridade) return false;
     if (filters.search && !t.descricao.toLowerCase().includes(filters.search.toLowerCase())) return false;
@@ -223,8 +233,8 @@ export default function Home() {
 
   const kpis = {
     total: tasks.length,
-    concluidas: tasks.filter((t) => t.status === 'Concluído').length,
-    emProgresso: tasks.filter((t) => t.status === 'Em Progresso').length,
+    concluidas: tasks.filter((t) => deriveStatus(t, today) === 'Concluído').length,
+    emProgresso: tasks.filter((t) => deriveStatus(t, today) === 'Em Progresso').length,
     altaPrioridade: tasks.filter((t) => t.prioridade === 'Alta').length,
   };
 
@@ -252,7 +262,7 @@ export default function Home() {
       doc.setTextColor(80);
       y += 5;
       doc.text(
-        `Responsável: ${t.responsavel} | Prioridade: ${t.prioridade} | Status: ${t.status}`,
+        `Responsável: ${t.responsavel} | Prioridade: ${t.prioridade} | Status: ${deriveStatus(t, today)}`,
         18,
         y
       );
@@ -356,6 +366,7 @@ export default function Home() {
           >
             <option>Todos</option>
             <option>Em Progresso</option>
+            <option>Atrasada</option>
             <option>Concluído</option>
           </select>
           <select
@@ -400,7 +411,8 @@ export default function Home() {
                 <th className="p-3">Responsável</th>
                 <th className="p-3">Prioridade</th>
                 <th className="p-3">Status</th>
-                <th className="p-3">Entrega</th>
+                <th className="p-3">Deadline</th>
+                <th className="p-3">Data Entregue</th>
                 <th className="p-3"></th>
               </tr>
             </thead>
@@ -453,23 +465,28 @@ export default function Home() {
                   </td>
                   <td className="p-3">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        t.status === 'Concluído' ? 'bg-green/10 text-green' : 'bg-skyblue/10 text-skyblue'
-                      }`}
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${statusBadgeClass(
+                        deriveStatus(t, today)
+                      )}`}
                     >
-                      {t.status}
+                      {deriveStatus(t, today)}
                     </span>
                   </td>
                   <td className="p-3">
-                    <label className="text-xs text-gray-500 flex items-center gap-1 cursor-pointer">
-                      Entrega:
-                      <input
-                        type="date"
-                        value={t.dataEntrega || ''}
-                        onChange={(e) => updateTaskDeadline(t.id, e.target.value)}
-                        className="border border-gray-300 rounded px-1 py-0.5 text-xs"
-                      />
-                    </label>
+                    <input
+                      type="date"
+                      value={t.deadline || ''}
+                      onChange={(e) => updateTaskDeadlineField(t.id, e.target.value)}
+                      className="border border-gray-300 rounded px-1 py-0.5 text-xs"
+                    />
+                  </td>
+                  <td className="p-3">
+                    <input
+                      type="date"
+                      value={t.dataEntregue || ''}
+                      onChange={(e) => updateTaskDataEntregue(t.id, e.target.value)}
+                      className="border border-gray-300 rounded px-1 py-0.5 text-xs"
+                    />
                   </td>
                   <td className="p-3 text-right">
                     <button onClick={() => requestDelete('tasks', t.id)} className="text-red hover:opacity-70">
@@ -480,7 +497,7 @@ export default function Home() {
               ))}
               {filteredTasks.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-gray-400">
+                  <td colSpan={7} className="p-6 text-center text-gray-400">
                     Nenhuma tarefa encontrada
                   </td>
                 </tr>
@@ -580,8 +597,8 @@ export default function Home() {
             </select>
             <input
               type="date"
-              value={newTask.dataEntrega}
-              onChange={(e) => setNewTask((n) => ({ ...n, dataEntrega: e.target.value }))}
+              value={newTask.deadline}
+              onChange={(e) => setNewTask((n) => ({ ...n, deadline: e.target.value }))}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
             />
           </div>
