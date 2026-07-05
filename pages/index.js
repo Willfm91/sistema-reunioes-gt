@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Trash2, Plus, X, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { deriveStatus, migrateLegacyTask } from '../lib/taskStatus';
+import { countOverdue, avgCurrentDelay, avgHistoricalDelay } from '../lib/taskMetrics';
 
 const TABS = [
   { id: 'processar', label: 'Processar' },
@@ -36,6 +37,11 @@ function statusBadgeClass(status) {
   if (status === 'Concluído') return 'bg-green/10 text-green';
   if (status === 'Atrasada') return 'bg-red/10 text-red';
   return 'bg-skyblue/10 text-skyblue';
+}
+
+function formatDays(value) {
+  if (value === null || value === undefined) return '—';
+  return `${value.toFixed(1)} dias`;
 }
 
 function KpiCard({ label, value, colorClass }) {
@@ -236,6 +242,9 @@ export default function Home() {
     concluidas: tasks.filter((t) => deriveStatus(t, today) === 'Concluído').length,
     emProgresso: tasks.filter((t) => deriveStatus(t, today) === 'Em Progresso').length,
     altaPrioridade: tasks.filter((t) => t.prioridade === 'Alta').length,
+    atrasadas: countOverdue(tasks, today),
+    mediaAtrasoAtual: avgCurrentDelay(tasks, today),
+    mediaAtrasoHistorico: avgHistoricalDelay(tasks),
   };
 
   function exportPDF() {
@@ -349,6 +358,20 @@ export default function Home() {
           <KpiCard label="Em Progresso" value={kpis.emProgresso} colorClass="text-orange" />
           <KpiCard label="Concluídas" value={kpis.concluidas} colorClass="text-green" />
           <KpiCard label="Alta Prioridade" value={kpis.altaPrioridade} colorClass="text-red" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <KpiCard label="Atrasadas" value={kpis.atrasadas} colorClass="text-red" />
+          <KpiCard
+            label="Média de atraso (atual)"
+            value={formatDays(kpis.mediaAtrasoAtual)}
+            colorClass="text-orange"
+          />
+          <KpiCard
+            label="Média de atraso (histórico)"
+            value={formatDays(kpis.mediaAtrasoHistorico)}
+            colorClass="text-navy"
+          />
         </div>
 
         <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-center">
