@@ -10,6 +10,23 @@ import {
   migrateObjective,
   objectiveInPeriod,
 } from '../lib/okr';
+import {
+  fetchTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  fetchCombinados,
+  createCombinado,
+  deleteCombinado,
+  fetchInsights,
+  createInsight,
+  deleteInsight,
+  fetchOkrs,
+  createOkr,
+  updateOkr,
+  deleteOkr,
+} from '../lib/supabaseSync';
+import { signInAnonymously } from '../lib/supabase';
 
 const TABS = [
   { id: 'processar', label: 'Processar' },
@@ -230,6 +247,7 @@ export default function Home() {
   const [insights, setInsights] = useState([]);
   const [okrs, setOkrs] = useState([]);
   const [hydrated, setHydrated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [theme, setTheme] = useState('dark');
 
   const [filters, setFilters] = useState({
@@ -255,6 +273,20 @@ export default function Home() {
     deadline: '',
     krId: '',
   });
+
+  // Sign in anonymously on first load
+  useEffect(() => {
+    const authenticate = async () => {
+      try {
+        await signInAnonymously();
+        setIsAuthenticated(true);
+      } catch (err) {
+        console.error('Auth failed, using local storage fallback:', err);
+        setIsAuthenticated(false);
+      }
+    };
+    authenticate();
+  }, []);
 
   useEffect(() => {
     setTasks(loadFromStorage('tasks', []).map(migrateLegacyTask));
