@@ -2,14 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --canvas: #111A15;
+  --panel: #1A241E;
+  --edge: #29362F;
+  --ink: #E6EDE9;
+  --muted: #90A499;
+  color-scheme: dark;
+}
+
+[data-theme='clean'] {
+  --canvas: #FAF9F6;
+  --panel: #FFFFFF;
+  --edge: #E7E4DD;
+  --ink: #1F2421;
+  --muted: #6B7671;
+  color-scheme: light;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
-  background-color: #0B0E14;
-  color: #E8EAED;
-  color-scheme: dark;
+  background-color: var(--canvas);
+  color: var(--ink);
 }
 
 input[type='date']::-webkit-calendar-picker-indicator {
   cursor: pointer;
   filter: invert(1);
+}
+
+[data-theme='clean'] input[type='date']::-webkit-calendar-picker-indicator {
+  filter: none;
 }
