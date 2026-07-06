@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm run build",
+  "functions": {
+    "pages/api/**": {
+      "memory": 512,
+      "maxDuration": 30
+    }
+  }
+}
