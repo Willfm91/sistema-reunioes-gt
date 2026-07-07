@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-const VALID_PRIORITIES = ['Alta', 'Média', 'Baixa'];
+const VALID_PRIORITIES = ['Alta', 'Media', 'Baixa'];
 
 interface ExtractedTask {
   descricao: string;
@@ -45,23 +45,23 @@ function sanitizeText(text: string): string {
 
 function buildPrompt(transcription: string): string {
   const clean = sanitizeText(transcription);
-  return `Você é um especialista em extrair tarefas de transcrições.
+  return `Voce e um especialista em extrair tarefas de transcricoes.
 
-TRANSCRIÇÃO:
+TRANSCRICAO:
 ${clean}
 
 EXTRAIA:
-1. TAREFAS: Ações específicas com descrição COMPLETA
-2. COMBINADOS: Decisões e acordos
+1. TAREFAS: Acoes especificas com descricao COMPLETA
+2. COMBINADOS: Decisoes e acordos
 3. INSIGHTS: Problemas e oportunidades
 
-CRÍTICO: Cada tarefa DEVE TER uma descricao CLARA E COMPLETA. Não deixe em branco!
+CRITICO: Cada tarefa DEVE TER uma descricao CLARA E COMPLETA. Nao deixe em branco!
 
-Retorne JSON VÁLIDO (sem markdown):
+Retorne JSON VALIDO (sem markdown):
 {
   "resumo": "resumo em 2-3 linhas",
   "tarefas": [
-    {"descricao": "descrição completa do que fazer", "responsavel": "nome", "prioridade": "Média"}
+    {"descricao": "descricao completa do que fazer", "responsavel": "nome", "prioridade": "Media"}
   ],
   "combinados": [
     {"descricao": "o que foi decidido", "responsavel": "nome"}
@@ -123,19 +123,19 @@ function normalizeItems(items: unknown): ExtractedItem[] {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' });
+    return res.status(405).json({ error: 'Metodo nao permitido' });
   }
 
   const { transcription } = req.body || {};
 
   if (!transcription || typeof transcription !== 'string' || transcription.trim().length === 0) {
-    return res.status(400).json({ error: 'Transcrição é obrigatória' });
+    return res.status(400).json({ error: 'Transcricao e obrigatoria' });
   }
 
   const apiKey = process.env.CLAUDE_API_KEY || process.env.NEXT_PUBLIC_CLAUDE_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'API key não configurada' });
+    return res.status(500).json({ error: 'API key nao configurada' });
   }
 
   try {
@@ -156,6 +156,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!claudeResponse.ok) {
       const errorText = await claudeResponse.text();
       console.error('Claude API error:', errorText);
+      return res.status(200).json(defaultResult());
+    }
+
+    if (!data?.content?.[0]?.text) {
       return res.status(200).json(defaultResult());
     }
 
