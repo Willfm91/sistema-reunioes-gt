@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-5';
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 const VALID_PRIORITIES = ['Alta', 'Media', 'Baixa'];
 
