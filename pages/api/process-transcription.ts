@@ -124,11 +124,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Transcricao e obrigatoria' });
   }
 
-  const apiKey = process.env.CLAUDE_API_KEY || process.env.NEXT_PUBLIC_CLAUDE_API_KEY;
+  const rawApiKey = process.env.CLAUDE_API_KEY || process.env.NEXT_PUBLIC_CLAUDE_API_KEY;
 
-  if (!apiKey) {
+  if (!rawApiKey) {
     return res.status(500).json({ error: 'API key nao configurada' });
   }
+
+  // Strip any non-ASCII characters (e.g. stray bullets/whitespace pasted into
+  // the env var) so the value is a valid HTTP header (ByteString / Latin-1).
+  const apiKey = rawApiKey.replace(/[^\x20-\x7E]/g, '').trim();
 
   try {
     const claudeResponse = await fetch(CLAUDE_API_URL, {
