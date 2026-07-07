@@ -391,6 +391,19 @@ export default function Home() {
     setCombinados((prev) => [...prev, ...newCombinados]);
     setInsights((prev) => [...prev, ...newInsights]);
 
+    // Sync to Supabase in background
+    if (isAuthenticated) {
+      newTasks.forEach((t) => {
+        createTask(t).catch((err) => console.error('Failed to sync task:', err));
+      });
+      newCombinados.forEach((c) => {
+        createCombinado(c).catch((err) => console.error('Failed to sync combinado:', err));
+      });
+      newInsights.forEach((i) => {
+        createInsight(i).catch((err) => console.error('Failed to sync insight:', err));
+      });
+    }
+
     setPreviewData(null);
     setTranscription('');
     setActiveTab('tarefas');
@@ -398,21 +411,42 @@ export default function Home() {
 
   function updateTaskDeadlineField(id, date) {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, deadline: date } : t)));
+    if (isAuthenticated) {
+      updateTask(id, { deadline: date }).catch((err) =>
+        console.error('Failed to sync deadline update:', err)
+      );
+    }
   }
 
   function updateTaskDataEntregue(id, date) {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, dataEntregue: date } : t)));
+    if (isAuthenticated) {
+      updateTask(id, { dataEntregue: date }).catch((err) =>
+        console.error('Failed to sync dataEntregue update:', err)
+      );
+    }
   }
 
   function updateTaskPriority(id, prioridade) {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, prioridade } : t)));
+    if (isAuthenticated) {
+      updateTask(id, { prioridade }).catch((err) =>
+        console.error('Failed to sync priority update:', err)
+      );
+    }
     setEditingPriorityId(null);
   }
 
   function updateTaskResponsavel(id, responsavel) {
+    const normalized = responsavel.trim() || 'Não especificado';
     setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, responsavel: responsavel.trim() || 'Não especificado' } : t))
+      prev.map((t) => (t.id === id ? { ...t, responsavel: normalized } : t))
     );
+    if (isAuthenticated) {
+      updateTask(id, { responsavel: normalized }).catch((err) =>
+        console.error('Failed to sync responsavel update:', err)
+      );
+    }
     setEditingResponsavelId(null);
   }
 
@@ -429,28 +463,71 @@ export default function Home() {
     const { type, id, all } = deleteConfirm;
     if (all) {
       if (type === 'tasks') {
+        const tasksToDelete = tasks;
         setTasks([]);
         setFilters((f) => ({ ...f, responsavel: 'Todos' }));
+        if (isAuthenticated) {
+          tasksToDelete.forEach((t) => {
+            deleteTask(t.id).catch((err) => console.error('Failed to delete task:', err));
+          });
+        }
       }
       if (type === 'combinados') {
+        const combinadosToDelete = combinados;
         setCombinados([]);
         setCombinadoResponsavel('Todos');
+        if (isAuthenticated) {
+          combinadosToDelete.forEach((c) => {
+            deleteCombinado(c.id).catch((err) => console.error('Failed to delete combinado:', err));
+          });
+        }
       }
       if (type === 'insights') {
+        const insightsToDelete = insights;
         setInsights([]);
         setInsightResponsavel('Todos');
+        if (isAuthenticated) {
+          insightsToDelete.forEach((i) => {
+            deleteInsight(i.id).catch((err) => console.error('Failed to delete insight:', err));
+          });
+        }
       }
     } else {
-      if (type === 'tasks') setTasks((prev) => prev.filter((t) => t.id !== id));
-      if (type === 'combinados') setCombinados((prev) => prev.filter((c) => c.id !== id));
-      if (type === 'insights') setInsights((prev) => prev.filter((i) => i.id !== id));
-      if (type === 'okr') setOkrs((prev) => prev.filter((o) => o.id !== id));
+      if (type === 'tasks') {
+        setTasks((prev) => prev.filter((t) => t.id !== id));
+        if (isAuthenticated) {
+          deleteTask(id).catch((err) => console.error('Failed to delete task:', err));
+        }
+      }
+      if (type === 'combinados') {
+        setCombinados((prev) => prev.filter((c) => c.id !== id));
+        if (isAuthenticated) {
+          deleteCombinado(id).catch((err) => console.error('Failed to delete combinado:', err));
+        }
+      }
+      if (type === 'insights') {
+        setInsights((prev) => prev.filter((i) => i.id !== id));
+        if (isAuthenticated) {
+          deleteInsight(id).catch((err) => console.error('Failed to delete insight:', err));
+        }
+      }
+      if (type === 'okr') {
+        setOkrs((prev) => prev.filter((o) => o.id !== id));
+        if (isAuthenticated) {
+          deleteOkr(id).catch((err) => console.error('Failed to delete okr:', err));
+        }
+      }
     }
     setDeleteConfirm(null);
   }
 
   function updateTaskKr(id, krId) {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, krId } : t)));
+    if (isAuthenticated) {
+      updateTask(id, { krId }).catch((err) =>
+        console.error('Failed to sync KR assignment:', err)
+      );
+    }
   }
 
   function addObjective() {
@@ -458,7 +535,18 @@ export default function Home() {
   }
 
   function updateObjectiveField(id, field, value) {
-    setOkrs((prev) => prev.map((o) => (o.id === id ? { ...o, [field]: value } : o)));
+    setOkrs((prev) => {
+      const updated = prev.map((o) => (o.id === id ? { ...o, [field]: value } : o));
+      if (isAuthenticated) {
+        const objective = updated.find((o) => o.id === id);
+        if (objective) {
+          updateOkr(id, objective).catch((err) =>
+            console.error('Failed to sync objective update:', err)
+          );
+        }
+      }
+      return updated;
+    });
   }
 
   function addKr(objectiveId) {
@@ -478,21 +566,39 @@ export default function Home() {
   }
 
   function updateKrField(objectiveId, krId, field, value) {
-    setOkrs((prev) =>
-      prev.map((o) =>
+    setOkrs((prev) => {
+      const updated = prev.map((o) =>
         o.id === objectiveId
           ? { ...o, krs: o.krs.map((k) => (k.id === krId ? { ...k, [field]: value } : k)) }
           : o
-      )
-    );
+      );
+      if (isAuthenticated) {
+        const objective = updated.find((o) => o.id === objectiveId);
+        if (objective) {
+          updateOkr(objectiveId, objective).catch((err) =>
+            console.error('Failed to sync KR field update:', err)
+          );
+        }
+      }
+      return updated;
+    });
   }
 
   function deleteKr(objectiveId, krId) {
-    setOkrs((prev) =>
-      prev.map((o) =>
+    setOkrs((prev) => {
+      const updated = prev.map((o) =>
         o.id === objectiveId ? { ...o, krs: o.krs.filter((k) => k.id !== krId) } : o
-      )
-    );
+      );
+      if (isAuthenticated) {
+        const objective = updated.find((o) => o.id === objectiveId);
+        if (objective) {
+          updateOkr(objectiveId, objective).catch((err) =>
+            console.error('Failed to sync KR deletion:', err)
+          );
+        }
+      }
+      return updated;
+    });
   }
 
   function handleCreateTask() {
@@ -512,9 +618,17 @@ export default function Home() {
       dataReuniao: now.toLocaleDateString('pt-BR'),
       horaReuniao: now.toTimeString().slice(0, 5),
     };
+    // Add to local state immediately (fast UI)
     setTasks((prev) => [...prev, task]);
     setNewTask({ descricao: '', responsavel: '', prioridade: 'Média', deadline: '', krId: '' });
     setShowCreateModal(false);
+
+    // Sync to Supabase in background
+    if (isAuthenticated) {
+      createTask(task).catch((err) => {
+        console.error('Failed to sync task to Supabase:', err);
+      });
+    }
   }
 
   const today = new Date().toISOString().slice(0, 10);
