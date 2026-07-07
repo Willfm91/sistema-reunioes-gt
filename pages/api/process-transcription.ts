@@ -152,12 +152,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const data = await claudeResponse.json();
+    console.log('Claude response:', JSON.stringify(data).substring(0, 500));
 
     if (!data?.content?.[0]?.text) {
+      console.log('No text found in Claude response');
       return res.status(200).json(defaultResult());
     }
     const rawText = data?.content?.[0]?.text || '';
+    console.log('Raw text length:', rawText.length);
     const cleaned = cleanJsonResponse(rawText);
+    console.log('Cleaned JSON length:', cleaned.length);
 
     let parsed: any;
     try {
