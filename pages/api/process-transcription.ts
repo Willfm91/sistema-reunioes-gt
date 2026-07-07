@@ -36,19 +36,11 @@ function defaultResult(): ProcessResult {
   };
 }
 
-function sanitizeText(text: string): string {
-  return text
-    .replace(/[^\x20-\x7E\n\r]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function buildPrompt(transcription: string): string {
-  const clean = sanitizeText(transcription);
   return `Voce e um especialista em extrair tarefas de transcricoes.
 
 TRANSCRICAO:
-${clean}
+${transcription}
 
 EXTRAIA:
 1. TAREFAS: Acoes especificas com descricao COMPLETA
