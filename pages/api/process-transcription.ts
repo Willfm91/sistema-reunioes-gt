@@ -156,16 +156,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const data = await claudeResponse.json();
-    console.log('Claude response:', JSON.stringify(data).substring(0, 500));
 
-    if (!data?.content?.[0]?.text) {
-      console.log('No text found in Claude response');
+    // Models with extended thinking return a "thinking" block before the
+    // "text" block, so we can't assume content[0] is the answer. Find the
+    // first block of type "text" (fall back to any block that has .text).
+    const contentBlocks: any[] = Array.isArray(data?.content) ? data.content : [];
+    const textBlock =
+      contentBlocks.find((b) => b?.type === 'text' && typeof b?.text === 'string') ||
+      contentBlocks.find((b) => typeof b?.text === 'string');
+    const rawText = textBlock?.text || '';
+
+    if (!rawText) {
+      console.log('No text block found in Claude response');
       return res.status(200).json(defaultResult());
     }
-    const rawText = data?.content?.[0]?.text || '';
-    console.log('Raw text length:', rawText.length);
+
     const cleaned = cleanJsonResponse(rawText);
-    console.log('Cleaned JSON length:', cleaned.length);
 
     let parsed: any;
     try {
