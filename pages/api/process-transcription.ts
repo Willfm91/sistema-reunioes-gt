@@ -47,7 +47,7 @@ EXTRAIA:
 2. COMBINADOS: Decisões e acordos
 3. INSIGHTS: Problemas e oportunidades
 
-⚠️ CRÍTICO: Cada tarefa DEVE TER uma descricao CLARA E COMPLETA. Não deixe em branco!
+CRÍTICO: Cada tarefa DEVE TER uma descricao CLARA E COMPLETA. Não deixe em branco!
 
 Retorne JSON VÁLIDO (sem markdown):
 {
