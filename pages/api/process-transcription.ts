@@ -159,11 +159,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(defaultResult());
     }
 
+    const data = await claudeResponse.json();
+
     if (!data?.content?.[0]?.text) {
       return res.status(200).json(defaultResult());
     }
-
-    const data = await claudeResponse.json();
     const rawText = data?.content?.[0]?.text || '';
     const cleaned = cleanJsonResponse(rawText);
 
