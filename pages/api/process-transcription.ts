@@ -1,6 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-5';
+// Allow this serverless function up to 60s on Vercel — long transcripts take
+// well over the default 10s limit, which otherwise times out and returns empty.
+export const config = {
+  maxDuration: 60,
+};
+
+// Haiku is fast and well-suited to this structured-extraction task, keeping us
+// comfortably under the function timeout even for long meetings.
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001';
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 const VALID_PRIORITIES = ['Alta', 'Media', 'Baixa'];
 
@@ -76,6 +84,23 @@ function cleanJsonResponse(raw: string): string {
     cleaned = cleaned.substring(start, end + 1);
   }
   return cleaned.trim();
+}
+
+function tryRecoverTruncatedJson(cleaned: string): any | null {
+  // Walk back from the end to the last complete object boundary "}" and try to
+  // parse, appending the closing brackets needed to balance the structure.
+  for (let i = cleaned.lastIndexOf('}'); i > 0; i = cleaned.lastIndexOf('}', i - 1)) {
+    const head = cleaned.slice(0, i + 1);
+    const opens = (head.match(/\[/g) || []).length;
+    const closes = (head.match(/\]/g) || []).length;
+    const candidate = head + ']'.repeat(Math.max(0, opens - closes)) + '}';
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // keep walking back to an earlier complete object
+    }
+  }
+  return null;
 }
 
 function normalizePriority(value: unknown): string {
@@ -180,7 +205,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      return res.status(200).json(defaultResult());
+      // If the JSON is truncated (e.g. output hit the token limit), try to
+      // salvage it by cutting back to the last complete "}" and closing any
+      // still-open arrays/object, instead of losing everything.
+      parsed = tryRecoverTruncatedJson(cleaned);
+      if (!parsed) {
+        return res.status(200).json(defaultResult());
+      }
     }
 
     const fallback = defaultResult();
