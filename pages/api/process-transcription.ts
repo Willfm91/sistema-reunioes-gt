@@ -144,7 +144,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 2000,
+        // Generous budget: the model spends tokens on an internal "thinking"
+        // block before the answer, so a low limit leaves no room for the JSON
+        // text on longer transcriptions (returns an empty result).
+        max_tokens: 8000,
         messages: [{ role: 'user', content: buildPrompt(transcription) }],
       }),
     });
